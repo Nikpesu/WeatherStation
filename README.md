@@ -21,6 +21,7 @@ char sleep_time[10] = "";
 
 ## Board scheme
 
+![Schematic_weather V2_2022-08-01](https://user-images.githubusercontent.com/92652074/182050715-7694a899-4b08-4b32-82c2-49ca656223d8.png)
 
 
 ## Adding Board to arduino IDE
