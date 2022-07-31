@@ -1,11 +1,7 @@
 
 ## Installation
 
-1) Upload Sketch
-
-2) Connect to AP (Weatherstation_xxx)
-
-3) Set parameters (or you could have set them in sketch, But you cant set wifi password)
+0) Set parameters (not needed as wifi ap will open)
 
 ```C++
 //Set parameters here if you want
@@ -15,6 +11,14 @@ char mqtt_user[40]="";
 char mqtt_password[40] = "";
 char sleep_time[10] = "";
 ```
+
+1) Upload Sketch
+
+2) Connect to AP (Weatherstation_xxx)
+
+3) Set parameters
+
+
 ## Board scheme
 
 
