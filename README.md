@@ -26,27 +26,27 @@ char sleep_time[10] = "";
 ## Adding Board to arduino IDE
 
 1) Adding board repository <br/>
-&emsp;➥Preferences <br/>
+&emsp;➥ Preferences <br/>
 &emsp;&emsp;➥	Settings <br/> 
 &emsp;&emsp;&emsp;➥	Additional Boards Manager URLs <br/>
 &emsp;&emsp;&emsp;&emsp;➥	https://arduino.esp8266.com/stable/package_esp8266com_index.json <br/>
 
 
 2) Installing board <br/>
-Tools <br/>
-&emsp;➥ Board <br/>
-&emsp;&emsp;➥ Boards Manager...<br/>
-&emsp;&emsp;&emsp;➥ esp8266 (ESP8266 Community) <br/>
-&emsp;&emsp;&emsp;&emsp;➥ Install<br/>
+&emsp;➥ Tools <br/>
+&emsp;&emsp;➥ Board <br/>
+&emsp;&emsp;&emsp;➥ Boards Manager...<br/>
+&emsp;&emsp;&emsp;&emsp;➥ ESP8266 (ESP8266 Community) <br/>
+&emsp;&emsp;&emsp;&emsp;&emsp;➥ Install<br/>
 
 3) Setting board <br/>
-&emsp;➥tools<br/>
+&emsp;➥ Tools<br/>
 &emsp;&emsp;➥ Board <br/>
-&emsp;&emsp;&emsp;➥ esp8266 boards (x.x.x)  <br/>
+&emsp;&emsp;&emsp;➥ ESP8266 boards (x.x.x)  <br/>
 &emsp;&emsp;&emsp;&emsp;➥ LOLIN(WEMOS) D1 mini (clone) <br/>
 
 4) Setting port <br/>
-&emsp;➥tools<br/>
+&emsp;➥ Tools<br/>
 &emsp;&emsp;➥  Board<br/>
 &emsp;&emsp;&emsp;➥  Port
 
