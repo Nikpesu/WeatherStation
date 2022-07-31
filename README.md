@@ -21,10 +21,11 @@ char sleep_time[10] = "";
 
 ## Adding Board
 
-1.1) Preferences 
-1.2) Settings 
-1.3) Additional Boards Manager URLs 
-1.4) https://arduino.esp8266.com/stable/package_esp8266com_index.json
+* Preferences 
+	➥	Settings 
+		➥	Additional Boards Manager URLs 
+			➥	https://arduino.esp8266.com/stable/package_esp8266com_index.json
+
 
 2.1) Tools 
 2.2) Board 
