@@ -21,25 +21,29 @@ char sleep_time[10] = "";
 
 ## Adding Board
 
-* Preferences \n
-	➥	Settings \n 
-		➥	Additional Boards Manager URLs \n
-			➥	https://arduino.esp8266.com/stable/package_esp8266com_index.json \n
+1) Adding board repository <br/>
+&emsp;➥Preferences <br/>
+&emsp;&emsp;➥	Settings <br/> 
+&emsp;&emsp;&emsp;➥	Additional Boards Manager URLs <br/>
+&emsp;&emsp;&emsp;&emsp;➥	https://arduino.esp8266.com/stable/package_esp8266com_index.json <br/>
 
 
-2.1) Tools 
-2.2) Board 
-2.3) Boards Manager...
-2.4) esp8266 (ESP8266 Community) 
-2.5) Install
+2) Installing board <br/>
+Tools <br/>
+&emsp;➥ Board <br/>
+&emsp;&emsp;➥ Boards Manager...<br/>
+&emsp;&emsp;&emsp;➥ esp8266 (ESP8266 Community) <br/>
+&emsp;&emsp;&emsp;&emsp;➥ Install<br/>
 
-3.1) Tools 
-3.2) Board
-3.3) esp8266 boards (x.x.x) 
-3.4) LOLIN(WEMOS) D1 mini (clone)
+3) Setting board <br/>
+&emsp;➥tools<br/>
+&emsp;&emsp;➥ Board <br/>
+&emsp;&emsp;&emsp;➥ esp8266 boards (x.x.x)  <br/>
+&emsp;&emsp;&emsp;&emsp;➥ LOLIN(WEMOS) D1 mini (clone) <br/>
 
-4.1) Tools 
-4.2) Board
-4.3) Port
+4) Setting port <br/>
+&emsp;➥tools<br/>
+&emsp;&emsp;➥  Board<br/>
+&emsp;&emsp;&emsp;➥  Port
 
 
