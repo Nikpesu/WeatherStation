@@ -1,29 +1,26 @@
-#include <FS.h>
+#include <FS.h>                   //Must be first!!!! Otherwise esp burns
 #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
 
-//needed for library
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
-#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 #include <ESP8266WiFi.h>
-#include <PubSubClient.h>
-#include <ArduinoJson.h>
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <PubSubClient.h>         //https://github.com/knolleary/pubsubclient
+#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
 #include <Wire.h>
 #include <SPI.h>
-#include <Adafruit_BMP280.h>
-#include "Adafruit_SGP30.h"
-#include "Adafruit_SHT31.h"
+#include <Adafruit_BMP280.h>      //https://github.com/adafruit/Adafruit_BMP280_Library
+#include "Adafruit_SGP30.h"       //https://github.com/adafruit/Adafruit_SGP30
+#include "Adafruit_SHT31.h"       //https://github.com/adafruit/Adafruit_SHT31
 
   Adafruit_BMP280 BMP280;
   Adafruit_SHT31 SHT31 = Adafruit_SHT31();
   Adafruit_SGP30 SGP30;
 
-
-
-WiFiClient espClient;
-PubSubClient client(espClient);
-IPAddress IP;//MQTT server IP
+  WiFiClient espClient;
+  PubSubClient client(espClient);
+  IPAddress IP;//MQTT server IP
 
   #define wsID "Weatherstation_1"
   char mqtt_ID[40];
@@ -105,9 +102,11 @@ void setup()
         json["sleep_time"] = sleep_time;
         
         File configFile = SPIFFS.open("/config.json", "w");
+        
         if (!configFile) {
           Serial.println("failed to open config file for writing");
         }
+        
         serializeJson(json, Serial);
         serializeJson(json, configFile);
         configFile.close();
@@ -137,6 +136,7 @@ void setup()
     if(BMP280_toggle) BMP280setup();
     if(SGP30_toggle) SGP30setup();
   }
+
 /*
 --------------------------------------
               Things...
@@ -154,14 +154,16 @@ void setup_wifi()
   {
     WiFiManager wifiManager;
     delay(10);
-    // We start by connecting to a WiFi network
+  
     Serial.println();
     Serial.print("Connecting to ");
     Serial.println(wifiManager.getSSID());
     
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiManager.getSSID(), wifiManager.getPassword());
+  
     int tries=0;
+  
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
@@ -174,6 +176,7 @@ void setup_wifi()
         ESP.reset();
       }
     }
+  
     randomSeed(micros());
     Serial.println("");
     Serial.println("WiFi connected");
@@ -196,17 +199,18 @@ void apStart()
     WiFiManagerParameter custom_mqtt_user("user", "mqtt user", mqtt_user, 40);
     WiFiManagerParameter custom_mqtt_password("password", "mqtt password", mqtt_password, 40);
     
-    
     wifiManager.addParameter(&custom_mqtt_ID);
     wifiManager.addParameter(&custom_sleep_time);
     wifiManager.addParameter(&custom_mqtt_user);
     wifiManager.addParameter(&custom_mqtt_password);
     wifiManager.addParameter(&custom_mqtt_port);
     wifiManager.addParameter(&custom_mqtt_server);
+  
     String APname=(String)mqtt_ID;
     char APnamechar[100];
     APname.toCharArray(APnamechar, 100);
     wifiManager.startConfigPortal(APnamechar, mqtt_password);
+  
     ((String)custom_mqtt_server.getValue()).toCharArray(mqtt_server,40);
     ((String)custom_mqtt_port.getValue()).toCharArray(mqtt_port,10);
     ((String)custom_mqtt_ID.getValue()).toCharArray(mqtt_ID,40);
@@ -214,6 +218,7 @@ void apStart()
     ((String)custom_mqtt_user.getValue()).toCharArray(mqtt_user,40);
     ((String)custom_mqtt_password.getValue()).toCharArray(mqtt_password,40);
   }
+
 /*
 --------------------------------------
          Writing conf to json
@@ -231,13 +236,16 @@ void writeToJson()
     json["sleep_time"] = sleep_time;
     
     File configFile = SPIFFS.open("/config.json", "w");
+  
     if (!configFile) {
       Serial.println("failed to open config file for writing");
     }
+  
     serializeJson(json, Serial);
     serializeJson(json, configFile);
     configFile.close();
   }
+
 /*
 --------------------------------------
       Connecting to MQTT server
@@ -256,20 +264,20 @@ void reconnect()
     Serial.println(IP);
     Serial.println(IP);
     while (!client.connected()) {
+      
       Serial.print("Attempting MQTT connection...");
-      // Create a random client ID
-  
       String clientID=(String)mqtt_ID, clientUser=(String)mqtt_user, clientPass=(String)mqtt_password;
       if (client.connect(clientID.c_str(), clientUser.c_str(), clientPass.c_str())) {
         char wsChar[datalength];
         String wsString=(String)wsID;
         wsString.toCharArray(wsChar,datalength);
         client.publish(wsChar,"1",  true);
-      } else {
+      } 
+      else 
+      {
         Serial.print("failed, rc=");
         Serial.print(client.state());
         Serial.println(" opening AP");
-        // Wait 5 seconds before retrying
         apStart();
         writeToJson();
         Serial.println("reboot...");
@@ -315,12 +323,14 @@ uint32_t getAbsoluteHumidity(float temperature, float humidity) {
     const uint32_t absoluteHumidityScaled = static_cast<uint32_t>(1000.0f * absoluteHumidity); // [mg/m^3]
     return absoluteHumidityScaled;
 }
+
 void SHT31_refresh()
   {
     SHT31_TEMP = (String)SHT31.readTemperature();
     SHT31_HUM = (String)SHT31.readHumidity();
     if(SHT31_TEMP!="nan") SHT31send=true;
   }
+
 void BMP280_refresh()
   {
     if(BMP280Status==1)
@@ -371,6 +381,7 @@ void refresh()
     while(tries<10 and BMP280send==false and BMP280Status==true);
       
     String wsString=(String)mqtt_ID;
+  
     if(SGP30_toggle and SGP30send)
     {
       char aSGP30[datalength], bSGP30[datalength];
@@ -384,6 +395,7 @@ void refresh()
       client.publish(bSGP30, hSGP30,  true);
       delay(10);
     }
+  
     if(BMP280_toggle and BMP280send)
     {
       char aBMP280[datalength], bBMP280[datalength], cBMP280[datalength];
@@ -401,6 +413,7 @@ void refresh()
       client.publish(cBMP280, altBMP280, true);
       delay(10);
     }
+  
     if(SHT31_toggle and SHT31send)
     {      
       char aSHT31[datalength], bSHT31[datalength];
@@ -425,11 +438,11 @@ void refresh()
 
 void SGP30setup()
   {
-    
     Serial.print("SGP30: ");
     SGP30Status=SGP30.begin();
     Serial.println((String)SGP30Status);
   }
+
 void SHT31setup()
   {
     Serial.print("SHT31: ");
@@ -437,6 +450,7 @@ void SHT31setup()
     Serial.println((String)SHT31Status);
     SHT31.heater(0);
   }
+
 void BMP280setup()
   {
     Serial.print("BMP280: ");
