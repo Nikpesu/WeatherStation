@@ -23,7 +23,7 @@ char sleep_time[10] = "";
 
 
 
-## Adding Board
+## Adding Board to arduino IDE
 
 1) Adding board repository <br/>
 &emsp;➥Preferences <br/>
