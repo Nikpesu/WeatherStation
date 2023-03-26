@@ -45,7 +45,8 @@
 <td>
 Like me!
 
-[<a href="https://github.com/ariary/Readme-Like-Button/issues/new?assignees=&labels=like&template=like.yml&title=Add+new+like%21">👍</a>]
+[<a href="https://github.com/Nikpesu/WeatherStation/edit/main/issues/new?assignees=&labels=like&template=like.yml&title=Add+new+like%21
+">👍</a>]
 
 <sub><b><i>Like counter: 32</i></b></sub>
 
@@ -53,8 +54,9 @@ Like me!
 
 Like me, and unlike me!
 
-[<a href="https://github.com/ariary/Readme-Like-Button/issues/new?assignees=&labels=like-mutable&template=like-mutable.yaml&title=Add+new+like%21+%28mutable%29">👍</a>]
-[<a href="https://github.com/ariary/Readme-Like-Button/issues/new?assignees=&labels=unlike-mutable&template=unlike-mutable.yml&title=I+want+to+Unlike%21">👎</a>]
+[<a href="https://github.com/Nikpesu/WeatherStation/edit/main/issues/new?assignees=&labels=like-mutable&template=like-mutable.yaml&title=Add+new+like%21+%28mutable%29
+">👍</a>]
+[<a href="https://github.com/Nikpesu/WeatherStation/edit/main/issues/new?assignees=&labels=unlike-mutable&template=unlike-mutable.yml&title=I+want+to+Unlike%21">👎</a>]
 
 <sub><b><i>Like counter: 6</i></b></sub>
 
