@@ -38,5 +38,28 @@
 
 ![Schematic_weather V2_2022-08-01](https://user-images.githubusercontent.com/92652074/182050715-7694a899-4b08-4b32-82c2-49ca656223d8.png)
 
+<div align=center>
 
+<table>
+<tr>
+<td>
+Like me!
+
+[<a href="https://github.com/ariary/Readme-Like-Button/issues/new?assignees=&labels=like&template=like.yml&title=Add+new+like%21">👍</a>]
+
+<sub><b><i>Like counter: 32</i></b></sub>
+
+<hr size=15px color="ff5733" width=70%>
+
+Like me, and unlike me!
+
+[<a href="https://github.com/ariary/Readme-Like-Button/issues/new?assignees=&labels=like-mutable&template=like-mutable.yaml&title=Add+new+like%21+%28mutable%29">👍</a>]
+[<a href="https://github.com/ariary/Readme-Like-Button/issues/new?assignees=&labels=unlike-mutable&template=unlike-mutable.yml&title=I+want+to+Unlike%21">👎</a>]
+
+<sub><b><i>Like counter: 6</i></b></sub>
+
+</td>
+</tr>
+</table>
+</div>
 
