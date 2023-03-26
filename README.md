@@ -1,7 +1,8 @@
 
 ## Installation
 
-0) Set parameters (not needed as wifi ap will open)
+1) Install Visual Studio Code: https://code.visualstudio.com/
+2) Install <a href="https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide">PlatformIO extension </a>from Extensions (CTRL + SHIFT + X): https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide
 
 ```C++
 //Set parameters here if you want
