@@ -1,8 +1,9 @@
 {
 	"folders": [
-		{
-			"path": "WeatherStation-V2"
-		}
+    {
+      "name": "WeatherStation-V2",
+      "path": "."
+    }
   ],
   "settings": {
     "files.associations": {

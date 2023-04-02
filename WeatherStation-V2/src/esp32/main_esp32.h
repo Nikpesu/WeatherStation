@@ -12,7 +12,7 @@ void startProgram()
   Wire.begin(33,35); //21,22 for esp32 devkitcv4
  
   // 1 wifi 0 hotspot
-  if(digitalRead(9)==false) //for instance 12 for esp32 devkitcv4
+  if(digitalRead(12)==false) 
   {
     wifiCon=true;  
     wifiStart();
