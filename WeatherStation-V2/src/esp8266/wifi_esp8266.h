@@ -17,13 +17,40 @@ operator<<(Print &p, const PrintMac &pmac)
   }
   return p;
 }
+String IpAddress2String(const IPAddress& ipAddress)
+{
+  return String(ipAddress[0]) + String(".") +\
+  String(ipAddress[1]) + String(".") +\
+  String(ipAddress[2]) + String(".") +\
+  String(ipAddress[3])  ; 
+}
+void httpConfig()
+{
+    String ispis=htmlStart;
+    ispis+="<body> <h1>CONFIG:</h1>";
+    ispis+="<br><br>Wifi_SSID: "+ wifi_ssid;
+    ispis+="<br>mqtt_server: "+ mqtt_server+":"+mqtt_port;
+    ispis+="<br>mqtt_user: "+ mqtt_user;
+    ispis+="<br>mqtt_messageRoot: "+ mqtt_messageRoot;
+    ispis+="<br>BMP280_toggle: "+ BMP280_toggle;
+    ispis+="<br>SHT31_toggle: "+ SHT31_toggle;
+    ispis+="<br>SGP30_toggle: "+ SGP30_toggle;
+    ispis+="<br>AHT2x_toggle: "+ AHT2x_toggle;
+    ispis+="<br>ENS160_toggle: "+ ENS160_toggle;
+    ispis+="<br>mdns_hostname: "+ mdns_hostname;
+    ispis+="<br>hotspot_ssid: "+ hotspot_ssid;
+    ispis+="<br>hotspot_pass: "+ hotspot_pass;
+    ispis=ispis+"<br><input id=\"subm\" type=\"button\" value=\"Back\" onclick=\"window.open(" + IpAddress2String(WiFi.localIP()) + ")\">";
+    ispis+="</body></html>";
+  server.send(200, "text/plain", ispis);
+}
 
 void httpDefault()
 {
   String ipda = mdns_hostname;
   ipda += ".local";
   Serial.println(ipda);
-  server.sendHeader("Location", ipda, true);
+  server.sendHeader("Location", IpAddress2String(WiFi.localIP()), true);
   server.send(302, "text/plain", "");
   server.client().stop();
 }
@@ -59,6 +86,9 @@ void httpData()
     mdns_hostname = (String)jsonDoc["mdns_hostname"];
     hotspot_ssid = (String)jsonDoc["hotspot_ssid"];
     hotspot_pass = (String)jsonDoc["hotspot_pass"];
+    AHT2x_toggle = jsonDoc["AHT2x_toggle"];
+    ENS160_toggle = jsonDoc["ENS160_toggle"];
+
     serializeJson(jsonDoc, Serial);
     Serial.println("-- done pasrsing JSON -- http data");
   }
@@ -141,6 +171,7 @@ void apStart()
 
   server.on("/", httpHome);
   server.on("/data", httpData);
+  server.on("/currentConfig", httpConfig);
 
   server.onNotFound(httpDefault);
   server.begin();

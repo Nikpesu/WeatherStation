@@ -3,6 +3,8 @@
 bool wifiCon;
 void startProgram()
 {
+  Serial.begin(115200);
+  delay(3000);
   Serial.println("||||||||");
   if(!LittleFS.begin()){
     Serial.println("An Error has occurred while mounting LittleFS");
@@ -16,13 +18,15 @@ void startProgram()
   {
     wifiCon=true;  
     wifiStart();
-    sensorsBegin();
     mqttSetup();
+    sensorsBegin();
   }
   else
   { 
     wifiCon=false;
+    Serial.println("Ada");
     apStart();
+    Serial.println("Ada");
   }
 
   //list dirs Serial.println("--XD--"); Dir dir = LittleFS.openDir(""); while (dir.next()) { Serial.println(dir.fileName()); File f = dir.openFile("r"); Serial.println(f.size()); } Serial.println("--XD--"); 
@@ -30,6 +34,7 @@ void startProgram()
 }
 
 void rst(){ESP.restart();}
+void sleepAndReset(){Serial.print("\nsleepAndReset"); ESP.deepSleep((refreshTime-5)*1e6); rst();} //1s = 1e6
 
 int i=10;
 void loopedProgram()
@@ -51,6 +56,5 @@ void loopedProgram()
     server.handleClient();
   }
   delay(500);
-  Serial.println(WiFi.localIP());
-  Serial.println(WiFi.getHostname());
+    Serial.println(wifiCon);
 }

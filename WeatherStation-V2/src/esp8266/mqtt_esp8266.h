@@ -50,6 +50,7 @@ void sht31Send()
   sht31Read();
   sendMqtt((mqtt_messageRoot + "/" + "SHT31/temp"), (String)sht31_temp, true);
   sendMqtt((mqtt_messageRoot + "/" + "SHT31/hum"), (String)sht31_hum, true);
+  sendMqtt((mqtt_messageRoot + "/" + "SHT31/status"), (String)sht31.readStatus(), true);
 }
 
 void sgp30Send()
@@ -67,4 +68,21 @@ void bmp280Send()
   sendMqtt((mqtt_messageRoot + "/" + "BMP280/temp"), (String)bmp280_temp, true);
   sendMqtt((mqtt_messageRoot + "/" + "BMP280/press"), (String)bmp280_press, true);
   sendMqtt((mqtt_messageRoot + "/" + "BMP280/alt"), (String)bmp280_alt, true);
+  sendMqtt((mqtt_messageRoot + "/" + "BMP280/status"), (String)bmp280.getStatus(), true);
+}
+
+void AHT2xSend()
+{
+  AHT2xRead();
+  sendMqtt((mqtt_messageRoot + "/" + "AHT2x/temp"), (String)aht2x_temp, true);
+  sendMqtt((mqtt_messageRoot + "/" + "AHT2x/hum"), (String)aht2x_hum, true);
+  sendMqtt((mqtt_messageRoot + "/" + "AHT2x/status"), (String)aht20.getStatus(), true);
+}
+void ENS160Send()
+{
+  ENS160Read();
+  sendMqtt((mqtt_messageRoot + "/" + "ENS160/AQI"), (String)ens160_aqi, true);
+  sendMqtt((mqtt_messageRoot + "/" + "ENS160/TVOC"), (String)ens160_tvoc, true);
+  sendMqtt((mqtt_messageRoot + "/" + "ENS160/ECO2"), (String)ens160_eco2, true);
+  sendMqtt((mqtt_messageRoot + "/" + "ENS160/status"), (String)myENS.getFlags(), true); //Gas Sensor Status Flag (0 - Standard, 1 - Warm up, 2 - Initial Start Up): 
 }

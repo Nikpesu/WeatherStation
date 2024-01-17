@@ -4,6 +4,8 @@ void sensorsBegin()
   sgp30.begin();
   sht31.begin(0x44);
   sht31.heater(false);
+  myENS.begin();	
+  myENS.setOperatingMode(SFE_ENS160_STANDARD);
   //sgp30.setIAQBaseline(0x8CEE, 0x8C10);                // set it manualy if you want... https://github.com/adafruit/Adafruit_SGP30/blob/master/examples/sgp30test/sgp30test.ino
   bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                      Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -21,7 +23,24 @@ void sensorsBegin()
   taskManager.scheduleFixedRate(refreshTime,sht31Send,TIME_SECONDS);
   taskManager.scheduleFixedRate(refreshTime,sgp30Send,TIME_SECONDS);
   taskManager.scheduleFixedRate(refreshTime,bmp280Send,TIME_SECONDS);
-  
+                       
+  if(!lowPowerMode_toggle)
+  {
+    if(SHT31_toggle) taskManager.scheduleFixedRate(refreshTime,sht31Send,TIME_SECONDS);
+    if(SGP30_toggle) taskManager.scheduleFixedRate(refreshTime,sgp30Send,TIME_SECONDS);
+    if(BMP280_toggle) taskManager.scheduleFixedRate(refreshTime,bmp280Send,TIME_SECONDS);
+    if(AHT2x_toggle) taskManager.scheduleFixedRate(refreshTime,AHT2xSend,TIME_SECONDS);
+    if(ENS160_toggle) taskManager.scheduleFixedRate(refreshTime,ENS160Send,TIME_SECONDS);
+  }
+  else 
+  {
+    if(SHT31_toggle) sht31Send();
+    if(SGP30_toggle) sgp30Send();
+    if(BMP280_toggle) bmp280Send();
+    if(AHT2x_toggle) AHT2xSend();
+    if(ENS160_toggle) ENS160Send();
+    delay(1000); sleepAndReset();
+  }
 
 }
 
@@ -54,4 +73,34 @@ void bmp280Read()
   bmp280_alt = bmp280.readAltitude(1013.25);
   String dbg=(String)bmp280_press+" "+(String)bmp280_alt+" "+(String)bmp280_temp+"|||"+(String)sht31_hum+" "+(String)sht31_temp+" "+(String)sht31.isHeaterEnabled()+"|||"+(String)sgp30_co2+" "+(String)sgp30_eth+" "+(String)sgp30_h2+" "+(String)sgp30_tvoc;
   Serial.println(dbg);
+}
+
+void AHT2xRead()
+{
+  if(aht20.readHumidity()!=255)
+  {
+    aht2x_temp=(float)aht20.readTemperature(AHTXX_USE_READ_DATA); 
+    aht2x_hum=(float)aht20.readHumidity(AHTXX_USE_READ_DATA); 
+  }
+  else 
+  {
+    aht2x_hum=(float)-1;
+    aht2x_temp=(float)-1;
+  }
+}
+void ENS160Read()
+{
+  if(myENS.getFlags()!=0) 
+  {
+    ens160_eco2=(float)-1;
+    ens160_aqi=(float)-1;
+    ens160_tvoc=(float)-1;
+  }
+  else 
+  {
+      ens160_aqi=(float)myENS.getAQI();
+      ens160_tvoc=(float)myENS.getTVOC();
+      ens160_eco2=(float)myENS.getECO2();
+  }
+
 }
