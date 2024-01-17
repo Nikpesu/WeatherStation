@@ -36,6 +36,11 @@ void loadConfig()
       BMP280_toggle = json["BMP280_toggle"];
       SHT31_toggle = json["SHT31_toggle"];
       SGP30_toggle = json["SGP30_toggle"];
+      ENS160_toggle = json["ENS160_toggle"];
+      AHT2x_toggle = json["AHT2x_toggle"];
+      lowPowerMode_toggle = json["lowPowerMode_toggle"];
+      refreshTime = json["refreshTime"];
+      
       mqtt_password = (String)json["mqtt_password"];
     }
     else
@@ -73,6 +78,12 @@ bool saveConfig()
   json["mdns_hostname"] = mdns_hostname;
   json["hotspot_ssid"] = hotspot_ssid;
   json["hotspot_pass"] = hotspot_pass;
+  json["refreshTime"] = refreshTime;
+  json["lowPowerMode_toggle"] = lowPowerMode_toggle;
+  json["ENS160_toggle"] = ENS160_toggle;
+  json["AHT2x_toggle"] = AHT2x_toggle;
+
+
   serializeJson(json, Serial);
   Serial.print("   copied to JSON -- saveConfig");
   // Open the JSON file for writing
@@ -104,11 +115,15 @@ void saveNewConfig()
   mqtt_password = "";
   mqtt_messageRoot = "";
   BMP280_toggle = true;
-  SHT31_toggle = false;
+  SHT31_toggle = true;
   SGP30_toggle = true;
   mdns_hostname = "weatherstation" + (String)rand();
   hotspot_ssid = mdns_hostname;
   hotspot_pass = "";
+  lowPowerMode_toggle = false;
+  refreshTime = 30;
+  ENS160_toggle = true;
+  AHT2x_toggle =true;
 
   saveConfig();
 }
@@ -117,16 +132,18 @@ void readConfig()
   loadConfig();
 
   Serial.println(wifi_ssid);
-  Serial.println(wifi_pass);
   Serial.println(mqtt_server);
   Serial.println(mqtt_port);
   Serial.println(mqtt_user);
-  Serial.println(mqtt_password);
   Serial.println(mqtt_messageRoot);
   Serial.println(BMP280_toggle);
   Serial.println(SHT31_toggle);
   Serial.println(SGP30_toggle);
+  Serial.println(ENS160_toggle);
+  Serial.println(AHT2x_toggle);
   Serial.println(mdns_hostname);
   Serial.println(hotspot_ssid);
   Serial.println(hotspot_pass);
+  Serial.println(lowPowerMode_toggle);
+  Serial.println(refreshTime);
 }

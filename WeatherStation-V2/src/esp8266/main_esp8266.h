@@ -16,8 +16,8 @@ void startProgram()
   {
     wifiCon=true;  
     wifiStart();
-    sensorsBegin();
     mqttSetup();
+    sensorsBegin();
   }
   else
   {
@@ -30,6 +30,7 @@ void startProgram()
 }
 
 void rst(){ESP.reset();}
+void sleepAndReset(){Serial.print("\nsleepAndReset"); ESP.deepSleep((refreshTime-5)*1e6); rst();} //1s = 1e6
 
 int i=10;
 void loopedProgram()
@@ -50,5 +51,5 @@ void loopedProgram()
     dnsServer.processNextRequest();
     server.handleClient();
   }
-  delay(500);
+  delay(250);
 }

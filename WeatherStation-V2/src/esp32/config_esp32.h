@@ -17,9 +17,12 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include "SparkFun_ENS160.h"
+#include <AHTxx.h> 
 
 //main
 void rst();
+void sleepAndReset(); 
 //json.h
 void saveNewConfig();
 void loadConfig();
@@ -31,6 +34,8 @@ void sht31Read();
 int getAbsoluteHumidity(float temperature, float humidity);
 void sgp30Read();
 void bmp280Read();
+void AHT2xRead();
+void ENS160Read(); 
 //mqtt.h
 void callback(char *topic, byte *payload, unsigned int length);
 void mqttSetup();
@@ -66,6 +71,9 @@ bool SGP30_toggle = false;
 String mdns_hostname = "";
 String hotspot_ssid = "Weatherstation";
 String hotspot_pass = "";
+bool AHT2x_toggle = false;
+bool ENS160_toggle = false;
+bool lowPowerMode_toggle = false;
 
 // Define the JSON document size
 // StaticJsonDocument<1024> doc;
@@ -81,10 +89,109 @@ PubSubClient client(espClient);
 Adafruit_SGP30 sgp30;
 Adafruit_BMP280 bmp280;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
+SparkFun_ENS160 myENS; 
+AHTxx aht20(AHTXX_ADDRESS_X38, AHT2x_SENSOR); 
 
 float sgp30_tvoc=0, sgp30_co2=0, sgp30_eth=0, sgp30_h2=0;
 float bmp280_temp=0, bmp280_press=0, bmp280_alt=0;
 float sht31_temp=0, sht31_hum=0;
 
+float ens160_eco2=0, ens160_tvoc=0, ens160_aqi=0;
+float aht2x_temp=0, aht2x_hum=0;
+
+String htmlStart="<!DOCTYPE html> \
+<html> \
+ \
+<head> \
+  <title>Weatherstation</title> \
+  <meta name=\"viewport\" content=\"initial-scale=1.0\"> \
+  <style> \
+    form { \
+      width: 75%; \
+      font-family: Arial, Helvetica, sans-serif; \
+      font-size: large; \
+      font-weight: bold; \
+    } \
+ \
+    #myForm>div { \
+ \
+      display: flex; \
+      justify-content: center; \
+      align-content: center; \
+      flex-direction: column; \
+      width: auto; \
+      align-content: center; \
+    } \
+ \
+    body { \
+      background-color: rgba(196, 196, 196, 0.411); \
+      font-family: Arial, Helvetica, sans-serif; \
+      display: flex; \
+      justify-content: center; \
+      align-content: center; \
+      flex-direction: column; \
+      width: auto; \
+      align-content: center; \
+      flex-wrap: wrap; \
+    } \
+ \
+    .senzori { \
+      display: flex; \
+      justify-content: space-around; \
+      align-items: center; \
+      width: 100%; \
+      flex-direction: row; \
+ \
+    } \
+ \
+    .senzor { \
+      display: flex; \
+      flex-direction: column; \
+    } \
+ \
+    label { \
+      align-self: center; \
+      margin-top: 1em; \
+    } \
+ \
+    input { \
+      height: 1.7em; \
+      font-size: 1.6em; \
+      background-color: gainsboro; \
+      border-radius: 0.3em; \
+      border: gray 1px solid; \
+      transition: 0.2s; \
+      color: rgb(0, 31, 78); \
+    } \
+ \
+    input[type=\"button\"] { \
+      height: 3em; \
+      margin-top: 1em; \
+ \
+    } \
+    input:hover { \
+      border-color: rgb(82, 82, 82); \
+      background-color: rgb(175, 175, 175); \
+      transition: 0.2s; \
+    } \
+     \
+    input[type=\"button\"]:active { \
+      border-color: rgb(80, 78, 78); \
+      background-color: rgb(100, 112, 117); \
+      color: white; \
+ \
+    } \
+ \
+    input[type=number]::-webkit-inner-spin-button, \
+    input[type=number]::-webkit-outer-spin-button { \
+      -webkit-appearance: none; \
+      margin: 1; \
+    } \
+ \
+    input[type=number] { \
+      -moz-appearance: textfield; \
+      appearance: textfield; \
+    } \
+  </style>";
 
 #endif
