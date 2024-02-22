@@ -40,6 +40,8 @@ void httpConfig()
     ispis+="<br>mdns_hostname: "+ mdns_hostname;
     ispis+="<br>hotspot_ssid: "+ hotspot_ssid;
     ispis+="<br>hotspot_pass: "+ hotspot_pass;
+    ispis+="<br>refreshTime: "+ (String)refreshTime;
+    ispis+="<br>lowPowerMode_toggle: "+ (String)lowPowerMode_toggle;
     ispis=ispis+"<a href=\"http://"+IpAddress2String(WiFi.localIP())+"/\"><br><input id=\"subm\" type=\"button\" value=\"Back\"></a>";
     ispis+="</body></html>";
   server.send(200, "text/html", ispis);
@@ -58,8 +60,21 @@ void httpDefault()
 void httpHome()
 {
   File file = LittleFS.open("/index.html", "r");
-  server.streamFile(file, "text/html");
+  String htmlContent = file.readString();
   file.close();
+  
+  htmlContent.replace("\"wifi_ssid\" value=\"\"", "\"wifi_ssid\" value=\"" + wifi_ssid + "\"");
+  htmlContent.replace("\"wifi_pass\" value=\"\"", "\"wifi_pass\" value=\"" + wifi_pass + "\"");
+  htmlContent.replace("\"mqtt_server\" value=\"\"", "\"mqtt_server\" value=\"" + mqtt_server + "\"");
+  htmlContent.replace("\"mqtt_port\" value=\"\"", "\"mqtt_port\" value=\"" + (String)mqtt_port + "\"");
+  htmlContent.replace("\"mqtt_user\" value=\"\"", "\"mqtt_user\" value=\"" + mqtt_user + "\"");
+  htmlContent.replace("\"mqtt_password\" value=\"\"", "\"mqtt_password\" value=\"" + mqtt_password + "\"");
+  htmlContent.replace("\"mqtt_messageRoot\" value=\"\"", "\"mqtt_messageRoot\" value=\"" + mqtt_messageRoot + "\"");
+  htmlContent.replace("\"mdns_hostname\" value=\"\"", "\"mdns_hostname\" value=\"" + mdns_hostname + "\"");
+  htmlContent.replace("\"hotspot_ssid\" value=\"\"", "\"hotspot_ssid\" value=\"" + hotspot_ssid + "\"");
+  htmlContent.replace("\"hotspot_pass\" value=\"\"", "\"hotspot_pass\" value=\"" + hotspot_pass + "\"");
+  htmlContent.replace("\"refreshTime\" value=\"\"", "\"refreshTime\" value=\"" + (String)refreshTime + "\"");
+  server.send(200, "text/html", htmlContent);
 }
 
 void httpData()
@@ -88,6 +103,8 @@ void httpData()
     hotspot_pass = (String)jsonDoc["hotspot_pass"];
     AHT2x_toggle = jsonDoc["AHT2x_toggle"];
     ENS160_toggle = jsonDoc["ENS160_toggle"];
+    PMSx003_toggle = jsonDoc["PMSx003_toggle"];
+    SCD4x_toggle = jsonDoc["SCD4x_toggle"];
 
     serializeJson(jsonDoc, Serial);
     Serial.println("-- done pasrsing JSON -- http data");

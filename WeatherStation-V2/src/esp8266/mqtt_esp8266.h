@@ -68,7 +68,6 @@ void bmp280Send()
   sendMqtt((mqtt_messageRoot + "/" + "BMP280/temp"), (String)bmp280_temp, true);
   sendMqtt((mqtt_messageRoot + "/" + "BMP280/press"), (String)bmp280_press, true);
   sendMqtt((mqtt_messageRoot + "/" + "BMP280/alt"), (String)bmp280_alt, true);
-  sendMqtt((mqtt_messageRoot + "/" + "BMP280/status"), (String)bmp280.getStatus(), true);
 }
 
 void AHT2xSend()
@@ -85,4 +84,13 @@ void ENS160Send()
   sendMqtt((mqtt_messageRoot + "/" + "ENS160/TVOC"), (String)ens160_tvoc, true);
   sendMqtt((mqtt_messageRoot + "/" + "ENS160/ECO2"), (String)ens160_eco2, true);
   sendMqtt((mqtt_messageRoot + "/" + "ENS160/status"), (String)myENS.getFlags(), true); //Gas Sensor Status Flag (0 - Standard, 1 - Warm up, 2 - Initial Start Up): 
+}
+void SCD4XSend()
+{
+  SCD4XRead();
+  sendMqtt((mqtt_messageRoot + "/" + "SCD4x/temp"), (String)scd4x_temp, true);
+  sendMqtt((mqtt_messageRoot + "/" + "SCD4x/hum"), (String)scd4x_hum, true);
+  sendMqtt((mqtt_messageRoot + "/" + "SCD4x/CO2"), (String)scd4x_co2, true);
+  sendMqtt((mqtt_messageRoot + "/" + "SCD4x/status"), (String)scd4x.readMeasurement(), true);
+
 }

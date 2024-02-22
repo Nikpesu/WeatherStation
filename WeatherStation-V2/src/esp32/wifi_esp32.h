@@ -29,15 +29,17 @@ void httpConfig()
     ispis+="<br>mqtt_server: "+ mqtt_server+":"+mqtt_port;
     ispis+="<br>mqtt_user: "+ mqtt_user;
     ispis+="<br>mqtt_messageRoot: "+ mqtt_messageRoot;
-    ispis+="<br>BMP280_toggle: "+ BMP280_toggle;
-    ispis+="<br>SHT31_toggle: "+ SHT31_toggle;
-    ispis+="<br>SGP30_toggle: "+ SGP30_toggle;
-    ispis+="<br>AHT2x_toggle: "+ AHT2x_toggle;
-    ispis+="<br>ENS160_toggle: "+ ENS160_toggle;
+    ispis+="<br>BMP280_toggle: "+ (String)BMP280_toggle;
+    ispis+="<br>SHT31_toggle: "+ (String)SHT31_toggle;
+    ispis+="<br>SGP30_toggle: "+ (String)SGP30_toggle;
+    ispis+="<br>AHT2x_toggle: "+ (String)AHT2x_toggle;
+    ispis+="<br>ENS160_toggle: "+ (String)ENS160_toggle;
     ispis+="<br>mdns_hostname: "+ mdns_hostname;
     ispis+="<br>hotspot_ssid: "+ hotspot_ssid;
     ispis+="<br>hotspot_pass: "+ hotspot_pass;
-    ispis=ispis+"<br><input id=\"subm\" type=\"button\" value=\"Back\" onclick=\"window.open(" + IpAddress2String(WiFi.localIP()) + ")\">";
+    ispis+="<br>refreshTime: "+ (String)refreshTime;
+    ispis+="<br>lowPowerMode_toggle: "+ (String)lowPowerMode_toggle;
+    ispis=ispis+"<a href=\"http://"+IpAddress2String(WiFi.localIP())+"/\"><br><input id=\"subm\" type=\"button\" value=\"Back\"></a>";
     ispis+="</body></html>";
   server.send(200, "text/plain", ispis);
 }
@@ -120,6 +122,7 @@ void wifiStart()
 
   server.on("/", httpHome);
   server.on("/data", httpData);
+  server.on("/currentConfig", httpConfig);
 
   server.onNotFound(httpDefault);
   server.begin();

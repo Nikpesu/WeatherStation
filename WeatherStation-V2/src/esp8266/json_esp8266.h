@@ -38,6 +38,8 @@ void loadConfig()
       SGP30_toggle = json["SGP30_toggle"];
       ENS160_toggle = json["ENS160_toggle"];
       AHT2x_toggle = json["AHT2x_toggle"];
+      SCD4x_toggle = json["SCD4x_toggle"];
+      PMSx003_toggle = json["PMSx003_toggle"];
       lowPowerMode_toggle = json["lowPowerMode_toggle"];
       refreshTime = json["refreshTime"];
       
@@ -82,6 +84,8 @@ bool saveConfig()
   json["lowPowerMode_toggle"] = lowPowerMode_toggle;
   json["ENS160_toggle"] = ENS160_toggle;
   json["AHT2x_toggle"] = AHT2x_toggle;
+  json["SCD4x_toggle"] = SCD4x_toggle;
+  json["PMSx003_toggle"] = SCD4x_toggle;
 
 
   serializeJson(json, Serial);
@@ -124,7 +128,8 @@ void saveNewConfig()
   refreshTime = 30;
   ENS160_toggle = true;
   AHT2x_toggle =true;
-
+  SCD4x_toggle = true;
+  PMSx003_toggle = true;
   saveConfig();
 }
 void readConfig()
@@ -141,9 +146,23 @@ void readConfig()
   Serial.println(SGP30_toggle);
   Serial.println(ENS160_toggle);
   Serial.println(AHT2x_toggle);
+  Serial.println(SCD4x_toggle);
+  Serial.println(PMSx003_toggle);
   Serial.println(mdns_hostname);
   Serial.println(hotspot_ssid);
   Serial.println(hotspot_pass);
   Serial.println(lowPowerMode_toggle);
   Serial.println(refreshTime);
+}
+
+
+void mqttJsonMake()
+{
+  DynamicJsonDocument json(JSON_OBJECT_SIZE);
+  json["state_class"]="measurment";
+  json["state_topic"]=mqtt_messageRoot;
+  json["unique_id"]=ESP.getChipId();
+  json["state_class"]="measurment";
+  json["state_class"]="measurment";
+  json["state_class"]="measurment";
 }

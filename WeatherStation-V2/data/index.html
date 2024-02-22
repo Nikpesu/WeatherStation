@@ -102,39 +102,21 @@
       const mqtt_user = document.getElementById("mqtt_user").value;
       const mqtt_password = document.getElementById("mqtt_password").value;
       const mqtt_messageRoot = document.getElementById("mqtt_messageRoot").value;
-      const BMP280_toggle = document.getElementById("BMP280_toggle").checked;
-      const SHT31_toggle = document.getElementById("SHT31_toggle").checked;
-      const SGP30_toggle = document.getElementById("SGP30_toggle").checked;
+      const BMP280_toggle = document.getElementById("BMP280_toggle").value;
+      const SHT31_toggle = document.getElementById("SHT31_toggle").value;
+      const SGP30_toggle = document.getElementById("SGP30_toggle").value;
+      const AHT2x_toggle = document.getElementById("AHT2x_toggle").value;
+      const ENS160_toggle = document.getElementById("ENS160_toggle").value;
+      const SCD4x_toggle = document.getElementById("SCD4x_toggle").value;
+      const PMSx003_toggle = document.getElementById("PMSx003_toggle").value;
       const mdns_hostname = document.getElementById("mdns_hostname").value;
       const hotspot_ssid = document.getElementById("hotspot_ssid").value;
       const hotspot_pass = document.getElementById("hotspot_pass").value;
-      const lowPowerMode_toggle = document.getElementById("lowPowerMode_toggle").checked;
+      const lowPowerMode_toggle = document.getElementById("lowPowerMode_toggle").value;
       const refreshTime = document.getElementById("refreshTime").value;
-      const AHT2x_toggle = document.getElementById("AHT2x_toggle").checked;
-      const ENS160_toggle = document.getElementById("ENS160_toggle").checked;
-
-      // Create data object
-      const data = {
-        wifi_ssid,
-        wifi_pass,
-        mqtt_server,
-        mqtt_port,
-        mqtt_user,
-        mqtt_password,
-        mqtt_messageRoot,
-        BMP280_toggle,
-        SHT31_toggle,
-        SGP30_toggle,
-        AHT2x_toggle,
-        ENS160_toggle,
-        mdns_hostname,
-        hotspot_ssid,
-        hotspot_pass,
-        lowPowerMode_toggle,
-        refreshTime
-      };
-
-      // Send data using fetch API
+      
+      const data = {wifi_ssid,wifi_pass,mqtt_server,mqtt_port,mqtt_user,mqtt_password,mqtt_messageRoot,BMP280_toggle,SHT31_toggle,SGP30_toggle,AHT2x_toggle,ENS160_toggle,SCD4x_toggle,PMSx003_toggle,mdns_hostname,hotspot_ssid,hotspot_pass,lowPowerMode_toggle,refreshTime};
+// Send data using fetch API
       fetch('/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,87 +127,78 @@
           // Reset form after data is sent
           //document.getElementById("myForm").reset();
         })
-        .catch(error => console.error('Error:', error));
-    }
+        .catch(error => console.error('Error:', error));}
   </script>
 </head>
 
-<body>
-
-  <h1 style="align-self: center;">Weatherstation</h1>
-
+<body><h1 style="align-self: center;">Weatherstation</h1>
   <form id="myForm" onsubmit="return false;">
-    <div>
-      <label for="wifi_ssid">WiFi SSID:</label>
-      <input type="text" id="wifi_ssid" name="wifi_ssid" required placeholder="SSID"><br>
-
+    <div>      <label for="wifi_ssid">WiFi SSID:</label>
+      <input type="text" placeholder="SSID" required name="wifi_ssid"  id="wifi_ssid" value=""><br>
       <label for="wifi_pass">WiFi Password:</label>
-      <input type="password" id="wifi_pass" name="wifi_pass" required placeholder="PASS"><br>
-
+      <input type="password" placeholder="PASS" required name="wifi_pass"  id="wifi_pass" value=""><br>
       <label for="mqtt_server">MQTT Server:</label>
-      <input type="text" id="mqtt_server" name="mqtt_server" required placeholder="Mosquitto IP"><br>
-
+      <input type="text" placeholder="Mosquitto IP" required name="mqtt_server"  id="mqtt_server" value=""><br>
       <label for="mqtt_port">MQTT Port:</label>
-      <input type="number" id="mqtt_port" name="mqtt_port" required value="1883"><br>
-
+      <input type="number" placeholder="1883" required name="mqtt_port"  id="mqtt_port" value=""><br>
       <label for="mqtt_user">MQTT Username:</label>
-      <input type="text" id="mqtt_user" name="mqtt_user" required placeholder="Mosquitto Username"><br>
-
-      <label for="mqtt_password">MQTT Password:</label>
-      <input type="password" id="mqtt_password" name="mqtt_password" required placeholder="Mosquitto Passowrd"><br>
-
+      <input type="text" placeholder="Mosquitto Username" required name="mqtt_user"  id="mqtt_user" value=""><br>
+      <label for="mqtt_password">MQTT Password</label>
+      <input type="password" placeholder="Mosquitto Passowrd" required name="mqtt_password"  id="mqtt_password" value=""><br>
       <label for="mqtt_messageRoot">MQTT Message Root ("msgroot" + "/sensor/data"):</label>
-      <input type="text" id="mqtt_messageRoot" name="mqtt_messageRoot" required placeholder="/ws123"><br>
+      <input type="text" placeholder="ws123" required name="mqtt_messageRoot"  id="mqtt_messageRoot" value=""><br>
 
       <label for="sens">Senzori:</label>
       <div id="sens" class="senzori">
         <div class="senzor">
-          <label for="BMP280_toggle">BMP280</label>
-          <input type="checkbox" id="BMP280_toggle" name="BMP280_toggle"><br>
-        </div>
-
+                <label for="BMP280_toggle">BMP280</label>
+      <input type="checkbox" placeholder="BMP280" required name="BMP280_toggle"  id="BMP280_toggle" value=""><br>
+</div>
         <div class="senzor">
-          <label for="SHT31_toggle">SHT31</label>
-          <input type="checkbox" id="SHT31_toggle" name="SHT31_toggle"><br>
-        </div>
-
+                <label for="SHT31_toggle">SHT31</label>
+      <input type="checkbox" placeholder="" required name="SHT31_toggle"  id="SHT31_toggle" value=""><br>
+</div>
         <div class="senzor">
-          <label for="SGP30_toggle">SGP30</label>
-          <input type="checkbox" id="SGP30_toggle" name="SGP30_toggle"><br>
-        </div>
+                <label for="SGP30_toggle">SGP30</label>
+      <input type="checkbox" placeholder="" required name="SGP30_toggle"  id="SGP30_toggle" value=""><br>
+</div>
         <div class="senzor">
-          <label for="AHT2x_toggle">AHT2x</label>
-          <input type="checkbox" id="AHT2x_toggle" name="AHT2x_toggle"><br>
-        </div>
+                <label for="AHT2x_toggle">AHT2x</label>
+      <input type="checkbox" placeholder="" required name="AHT2x_toggle"  id="AHT2x_toggle" value=""><br>
+</div>
         <div class="senzor">
-          <label for="ENS160_toggle">ENS160</label>
-          <input type="checkbox" id="ENS160_toggle" name="ENS160_toggle"><br>
-        </div>
-
+                <label for="ENS160_toggle">ENS160</label>
+      <input type="checkbox" placeholder="" required name="ENS160_toggle"  id="ENS160_toggle" value=""><br>
+</div>
+        <div class="senzor">
+                <label for="SCD4x_toggle">SCD4x</label>
+      <input type="checkbox" placeholder="" required name="SCD4x_toggle"  id="SCD4x_toggle" value=""><br>
+</div>
+        <div class="senzor">
+                <label for="PMSx003_toggle">PMSx003</label>
+      <input type="checkbox" placeholder="" required name="PMSx003_toggle"  id="PMSx003_toggle" value=""><br>
+</div>
 
       </div><br>
-
       <label for="mdns_hostname">mDNS hostname (without .local):</label>
-      <input type="text" id="mdns_hostname" name="mdns_hostname" required value="wsnew"><br>
-
+      <input type="text" placeholder="mdns" required name="mdns_hostname"  id="mdns_hostname" value=""><br>
       <label for="hotspot_ssid">Hotspot SSID:</label>
-      <input type="text" id="hotspot_ssid" name="hotspot_ssid" required value="ws"><br>
-
+      <input type="text" placeholder="ssid" required name="hotspot_ssid"  id="hotspot_ssid" value=""><br>
       <label for="hotspot_pass">Hotspot Password:</label>
-      <input type="password" id="hotspot_pass" name="hotspot_pass" required value=""><br>
+      <input type="password" placeholder="pass" required name="hotspot_pass"  id="hotspot_pass" value=""><br>
 
       <div id="s">
-        <div class="senzor">
-          <label for="lowPowerMode_toggle">Low Power Mode (toggle / refresh|ON Time)</label>
-          <input type="checkbox" id="lowPowerMode_toggle" name="lowPowerMode_toggle"><br>
-          <input type="number" id="refreshTime" name="refreshTime" required value="30"><br>
+        <div class="senzor">      <label for="lowPowerMode_toggle">Low Power Mode (toggle / refresh|ON Time)</label><input type ="checkbox" placeholder="" required name="lowPowerMode_toggle"  id="lowPowerMode_toggle" value=""><br>
+<input type ="number" placeholder="30" required name="refreshTime"  id="refreshTime" value=""><br>
+
         </div>
       </div><br>
 
       <input id="subm" type="button" value="Submit" onclick="sendData()" >
 
-    </div>
-  </form>
+     </div>
+       <br><p></p><br><a href="currentConfig"><button type="button"> Current config </button></a>
+ </form>
 </body>
 
 </html>

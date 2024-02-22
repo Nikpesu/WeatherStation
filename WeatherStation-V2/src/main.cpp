@@ -5,6 +5,7 @@
   #include "esp8266/wifi_esp8266.h"
   #include "esp8266/json_esp8266.h"
   #include "esp8266/main_esp8266.h"
+  #include "esp8266/new_json.h"
 #elif defined(ESP32)
 #pragma message "ESP32 stuff happening!"
   #include "esp32/config_esp32.h"
