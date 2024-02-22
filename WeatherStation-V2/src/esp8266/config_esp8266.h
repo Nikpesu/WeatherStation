@@ -19,6 +19,7 @@
 #include <ESP8266mDNS.h>
 #include "SparkFun_ENS160.h"
 #include <AHTxx.h>
+#include "SparkFun_SCD4x_Arduino_Library.h"
 
 //main
 void rst();
@@ -36,7 +37,7 @@ void sgp30Read();
 void bmp280Read();
 void AHT2xRead();
 void ENS160Read();
-
+void SCD4XRead();
 //mqtt.h
 void callback(char *topic, byte *payload, unsigned int length);
 void mqttSetup();
@@ -46,17 +47,44 @@ void sgp30Send();
 void bmp280Send();
 void AHT2xSend();
 void ENS160Send();
+void SCD4XSend();
 //wifi.h
 void httpDefault();
 void httpHome();
 void httpData();
 void wifiStart();
 
+
+void writeToJson();
+
 // Set the size of the JSON object
 const int JSON_OBJECT_SIZE = 2048;
 
 // Set the path to the JSON file
 const char *JSON_FILE_PATH = "/config1.json";
+
+struct {
+  int 
+    mqtt_port, 
+    refreshTime;
+  bool 
+    BMP280_toggle, 
+    SHT31_toggle,
+    SGP30_toggle,
+    AHT2x_toggle,
+    ENS160_toggle,
+    lowPowerMode_toggle;
+  String 
+    wifi_ssid,
+    wifi_pass,
+    mqtt_server,
+    mqtt_user,
+    mqtt_password,
+    hotspot_ssid,
+    hotspot_pass,
+    mdns_hostname;
+} values;
+
 
 
 // Define the variables
@@ -70,9 +98,10 @@ String mqtt_messageRoot = "";
 bool BMP280_toggle = false;
 bool SHT31_toggle = false;
 bool SGP30_toggle = false;
-
 bool AHT2x_toggle = false;
 bool ENS160_toggle = false;
+bool SCD4x_toggle = true;
+bool PMSx003_toggle = false;
 bool lowPowerMode_toggle = false;
 int refreshTime = 30;
 
@@ -97,10 +126,12 @@ SparkFun_ENS160 myENS;
 Adafruit_SGP30 sgp30;
 Adafruit_BMP280 bmp280;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
+SCD4x scd4x;
 
 float sgp30_tvoc=0, sgp30_co2=0, sgp30_eth=0, sgp30_h2=0;
 float bmp280_temp=0, bmp280_press=0, bmp280_alt=0;
 float sht31_temp=0, sht31_hum=0;
+float scd4x_temp=0, scd4x_hum=0, scd4x_co2=0;
 
 float ens160_eco2=0, ens160_tvoc=0, ens160_aqi=0;
 float aht2x_temp=0, aht2x_hum=0;
