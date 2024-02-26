@@ -256,7 +256,7 @@ namespace configmaker
                             {
                                 string[] parametri = {      "pm1.0", "pm2.5", "pm10",  "n0p3",     "n0p5",     "n1p0",     "n2p5",     "n5p0",     "n10p0",    "hcho",  "temp", "hum" };
                                 string[] mjerneJedinice = { "μg/m3", "μg/m3", "μg/m3", "#/100cm3", "#/100cm3", "#/100cm3", "#/100cm3", "#/100cm3", "#/100cm3", "mg/m3", "°C",   "%" };
-                                string senzor = "PMSxxxx";
+                                string senzor = "PMSx003";
                                 int i = 0;
                                 tmp += "  # " + senzor + " " + tb1 + "\n";
                                 foreach (string par in parametri)

@@ -2,6 +2,7 @@
 bool wifiCon;
 void startProgram()
 {
+
   Serial.begin(115200);
   Serial.println("||||||||");
   if(!LittleFS.begin()){
@@ -10,6 +11,7 @@ void startProgram()
   }
   loadConfig(); 
   Wire.begin(4,5);
+  pms.init();
 
   // 1 wifi 0 hotspot
   if(digitalRead(12)==true)
