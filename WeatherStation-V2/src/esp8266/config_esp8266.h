@@ -2,6 +2,7 @@
 #define GLOBAL_H
 
 #include <Arduino.h>
+#include <SoftwareSerial.h>
 #include <LittleFS.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
@@ -20,6 +21,7 @@
 #include "SparkFun_ENS160.h"
 #include <AHTxx.h>
 #include "SparkFun_SCD4x_Arduino_Library.h"
+#include <PMserial.h> 
 
 //main
 void rst();
@@ -38,6 +40,7 @@ void bmp280Read();
 void AHT2xRead();
 void ENS160Read();
 void SCD4XRead();
+void PMSx003Read();
 //mqtt.h
 void callback(char *topic, byte *payload, unsigned int length);
 void mqttSetup();
@@ -48,6 +51,7 @@ void bmp280Send();
 void AHT2xSend();
 void ENS160Send();
 void SCD4XSend();
+void PMSx003Send();
 //wifi.h
 void httpDefault();
 void httpHome();
@@ -62,6 +66,8 @@ const int JSON_OBJECT_SIZE = 2048;
 
 // Set the path to the JSON file
 const char *JSON_FILE_PATH = "/config1.json";
+
+
 
 struct {
   int 
@@ -105,7 +111,7 @@ bool PMSx003_toggle = false;
 bool lowPowerMode_toggle = false;
 int refreshTime = 30;
 
-String mdns_hostname = "";
+String mdns_hostname = "tmp";
 String hotspot_ssid = "Weatherstation";
 String hotspot_pass = "";
 
@@ -118,6 +124,11 @@ DNSServer dnsServer;
 ESP8266WebServer server(80);
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+
+constexpr auto PMS_RX = 14;
+constexpr auto PMS_TX = 13;
+SerialPM pms(PMS5003, PMS_RX, PMS_TX); // PMSx003, RX, TX
 
 
 AHTxx aht20(AHTXX_ADDRESS_X38, AHT2x_SENSOR); 
@@ -135,6 +146,26 @@ float scd4x_temp=0, scd4x_hum=0, scd4x_co2=0;
 
 float ens160_eco2=0, ens160_tvoc=0, ens160_aqi=0;
 float aht2x_temp=0, aht2x_hum=0;
+uint16_t pmsx003Data[9]={0};
+float pmsx003Extra[3]={0};
+/*
+pm01 	uint16_t 	PM 	<= 1.0 µm 	µg/m³ 	PM1.0, ultra fine particles
+pm25 	uint16_t 	PM 	<= 2.5 µm 	µg/m³ 	PM2.5, fine particles
+pm10 	uint16_t 	PM 	<= 10 µm 	µg/m³ 	PM10
+n0p3 	uint16_t 	NC 	>= 0.3 µm 	#/100 cm³ 	
+n0p5 	uint16_t 	NC 	>= 0.5 µm 	#/100 cm³ 	
+n1p0 	uint16_t 	NC 	>= 1.0 µm 	#/100 cm³ 	
+n2p5 	uint16_t 	NC 	>= 2.5 µm 	#/100 cm³ 	
+n5p0 	uint16_t 	NC 	>= 5.0 µm 	#/100 cm³ 	
+n10p0 	uint16_t 	NC 	>= 10 µm 	#/100 cm³ 	
+pm 	uint16_t[3] 	PM 	<= 1,2.5,10 µm 	µg/m³ 	array containing pm01,pm25,pm10
+nc 	uint16_t[6] 	NC 	>= 0.3,0.5,1,5,10 µm 	#/100cm³ 	array containing n0p3,..,n10p0
+data 	uint16_t[9] 	PM/NC 			all PM/NC data pm01,..,n10p0
+temp 	float 	T 		°C 	temperature
+rhum 	float 	RH 		% 	relative humidity
+hcho 	float 	HCHO 		mg/m³ 	formaldehyde concentration
+extra 	float[3] 	T/RH/HCHO 			array containing temp,rhum,hcho
+*/
 
 String htmlStart="<!DOCTYPE html> \
 <html> \

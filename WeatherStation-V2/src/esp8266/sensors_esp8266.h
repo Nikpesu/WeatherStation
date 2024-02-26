@@ -26,6 +26,7 @@ void sensorsBegin()
     if(AHT2x_toggle) taskManager.scheduleFixedRate(refreshTime,AHT2xSend,TIME_SECONDS);
     if(ENS160_toggle) taskManager.scheduleFixedRate(refreshTime,ENS160Send,TIME_SECONDS);
     if(SCD4x_toggle) taskManager.scheduleFixedRate(refreshTime,SCD4XSend,TIME_SECONDS);
+    if(PMSx003_toggle) taskManager.scheduleFixedRate(refreshTime,PMSx003Send,TIME_SECONDS);
   }
   else 
   {
@@ -117,5 +118,53 @@ void SCD4XRead()
 
   }
 
+
+}
+void PMSx003Read()
+{
+  
+  // read the PM sensor
+  pms.read();
+  if (pms)
+  { 
+    if (pms.has_number_concentration())
+      for(int i=0; i<9; i++)
+        pmsx003Data[i]=pms.data[i];
+    if (pms.has_temperature_humidity() || pms.has_formaldehyde())
+      for(int i=0; i<9; i++)
+        pmsx003Extra[i]=pms.extra[i];
+  }
+  else
+  { // something went wrong
+    switch (pms.status)
+    {
+    case pms.OK: // should never come here
+      break;     // included to compile without warnings
+    case pms.ERROR_TIMEOUT:
+      Serial.println(F(PMS_ERROR_TIMEOUT));
+      break;
+    case pms.ERROR_MSG_UNKNOWN:
+      Serial.println(F(PMS_ERROR_MSG_UNKNOWN));
+      break;
+    case pms.ERROR_MSG_HEADER:
+      Serial.println(F(PMS_ERROR_MSG_HEADER));
+      break;
+    case pms.ERROR_MSG_BODY:
+      Serial.println(F(PMS_ERROR_MSG_BODY));
+      break;
+    case pms.ERROR_MSG_START:
+      Serial.println(F(PMS_ERROR_MSG_START));
+      break;
+    case pms.ERROR_MSG_LENGTH:
+      Serial.println(F(PMS_ERROR_MSG_LENGTH));
+      break;
+    case pms.ERROR_MSG_CKSUM:
+      Serial.println(F(PMS_ERROR_MSG_CKSUM));
+      break;
+    case pms.ERROR_PMS_TYPE:
+      Serial.println(F(PMS_ERROR_PMS_TYPE));
+      break;
+    }
+  }
 
 }

@@ -94,3 +94,18 @@ void SCD4XSend()
   sendMqtt((mqtt_messageRoot + "/" + "SCD4x/status"), (String)scd4x.readMeasurement(), true);
 
 }
+
+void PMSx003Send()
+{
+  PMSx003Read();
+  String parametri[12] = {"pm1.0", "pm2.5", "pm10", "n0p3", "n0p5", "n1p0", "n2p5", "n5p0", "n10p0", "temp", "hum", "hcho"};
+  for(int i=0; i<9; i++)
+  {
+    sendMqtt((mqtt_messageRoot + "/" + "PMSx003/"+parametri[i]), (String)pmsx003Data[i], true);
+  }
+  for(int i=0; i<3; i++)
+  {
+    sendMqtt((mqtt_messageRoot + "/" + "PMSx003/"+parametri[i+9]), (String)pmsx003Extra[i], true);
+  }
+
+}

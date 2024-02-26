@@ -37,6 +37,8 @@ void httpConfig()
     ispis+="<br>SGP30_toggle: "+ (String)SGP30_toggle;
     ispis+="<br>AHT2x_toggle: "+ (String)AHT2x_toggle;
     ispis+="<br>ENS160_toggle: "+ (String)ENS160_toggle;
+    ispis+="<br>SCD4x_toggle: "+ (String)SCD4x_toggle;
+    ispis+="<br>PMSx003_toggle: "+ (String)PMSx003_toggle;
     ispis+="<br>mdns_hostname: "+ mdns_hostname;
     ispis+="<br>hotspot_ssid: "+ hotspot_ssid;
     ispis+="<br>hotspot_pass: "+ hotspot_pass;
@@ -73,7 +75,24 @@ void httpHome()
   htmlContent.replace("\"mdns_hostname\" value=\"\"", "\"mdns_hostname\" value=\"" + mdns_hostname + "\"");
   htmlContent.replace("\"hotspot_ssid\" value=\"\"", "\"hotspot_ssid\" value=\"" + hotspot_ssid + "\"");
   htmlContent.replace("\"hotspot_pass\" value=\"\"", "\"hotspot_pass\" value=\"" + hotspot_pass + "\"");
+
+  if(BMP280_toggle) htmlContent.replace("id=\"BMP280_toggle\"", "id=\"BMP280_toggle\" checked");
+  if(SHT31_toggle) htmlContent.replace("id=\"SHT31_toggle\"", "id=\"SHT31_toggle\" checked");
+  if(SGP30_toggle) htmlContent.replace("id=\"SGP30_toggle\"", "id=\"SGP30_toggle\" checked");
+  if(AHT2x_toggle) htmlContent.replace("id=\"AHT2x_toggle\"", "id=\"AHT2x_toggle\" checked");
+  if(ENS160_toggle) htmlContent.replace("id=\"ENS160_toggle\"", "id=\"ENS160_toggle\" checked");
+  if(SCD4x_toggle) htmlContent.replace("id=\"SCD4x_toggle\"", "id=\"SCD4x_toggle\" checked");
+  if(PMSx003_toggle) htmlContent.replace("id=\"PMSx003_toggle\"", "id=\"PMSx003_toggle\" checked");
+  if(lowPowerMode_toggle) htmlContent.replace("id=\"lowPowerMode_toggle\"", "id=\"lowPowerMode_toggle\" checked");
+
+
+
   htmlContent.replace("\"refreshTime\" value=\"\"", "\"refreshTime\" value=\"" + (String)refreshTime + "\"");
+
+
+
+
+
   server.send(200, "text/html", htmlContent);
 }
 

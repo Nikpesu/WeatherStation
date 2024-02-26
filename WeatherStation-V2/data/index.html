@@ -102,17 +102,17 @@
       const mqtt_user = document.getElementById("mqtt_user").value;
       const mqtt_password = document.getElementById("mqtt_password").value;
       const mqtt_messageRoot = document.getElementById("mqtt_messageRoot").value;
-      const BMP280_toggle = document.getElementById("BMP280_toggle").value;
-      const SHT31_toggle = document.getElementById("SHT31_toggle").value;
-      const SGP30_toggle = document.getElementById("SGP30_toggle").value;
-      const AHT2x_toggle = document.getElementById("AHT2x_toggle").value;
-      const ENS160_toggle = document.getElementById("ENS160_toggle").value;
-      const SCD4x_toggle = document.getElementById("SCD4x_toggle").value;
-      const PMSx003_toggle = document.getElementById("PMSx003_toggle").value;
+      const BMP280_toggle = document.getElementById("BMP280_toggle").checked;
+      const SHT31_toggle = document.getElementById("SHT31_toggle").checked;
+      const SGP30_toggle = document.getElementById("SGP30_toggle").checked;
+      const AHT2x_toggle = document.getElementById("AHT2x_toggle").checked;
+      const ENS160_toggle = document.getElementById("ENS160_toggle").checked;
+      const SCD4x_toggle = document.getElementById("SCD4x_toggle").checked;
+      const PMSx003_toggle = document.getElementById("PMSx003_toggle").checked;
       const mdns_hostname = document.getElementById("mdns_hostname").value;
       const hotspot_ssid = document.getElementById("hotspot_ssid").value;
       const hotspot_pass = document.getElementById("hotspot_pass").value;
-      const lowPowerMode_toggle = document.getElementById("lowPowerMode_toggle").value;
+      const lowPowerMode_toggle = document.getElementById("lowPowerMode_toggle").checked;
       const refreshTime = document.getElementById("refreshTime").value;
       
       const data = {wifi_ssid,wifi_pass,mqtt_server,mqtt_port,mqtt_user,mqtt_password,mqtt_messageRoot,BMP280_toggle,SHT31_toggle,SGP30_toggle,AHT2x_toggle,ENS160_toggle,SCD4x_toggle,PMSx003_toggle,mdns_hostname,hotspot_ssid,hotspot_pass,lowPowerMode_toggle,refreshTime};
@@ -188,7 +188,7 @@
       <input type="password" placeholder="pass" required name="hotspot_pass"  id="hotspot_pass" value=""><br>
 
       <div id="s">
-        <div class="senzor">      <label for="lowPowerMode_toggle">Low Power Mode (toggle / refresh|ON Time)</label><input type ="checkbox" placeholder="" required name="lowPowerMode_toggle"  id="lowPowerMode_toggle" value=""><br>
+        <div class="senzor">      <label for="lowPowerMode_toggle" style="text-align: center" ><p>Low Power Mode (toggle / refresh|ON Time)</p><p>!!!if enabled will be only able to change settings with hotspot active!!!</p></label><input type ="checkbox" placeholder="" required name="lowPowerMode_toggle"  id="lowPowerMode_toggle" value=""><br>
 <input type ="number" placeholder="30" required name="refreshTime"  id="refreshTime" value=""><br>
 
         </div>
