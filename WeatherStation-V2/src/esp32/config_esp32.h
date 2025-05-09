@@ -41,16 +41,16 @@
   #define HOTSPOT_SSID "Weatherstation"
   #define HOTSPOT_PASS ""
 
-  #define LOWPOWERMODE_TOGGLE false;
-  #define AHT2X_TOGGLE false;
-  #define BMP280_TOGGLE false;
-  #define ENS160_TOGGLE false;
-  #define PM1006K_TOGGLE false;
-  #define PMSX003_TOGGLE false;
-  #define SCD4X_TOGGLE false;
-  #define SGP30_TOGGLE false;
-  #define SHT31_TOGGLE false;
-  #define SPS30_TOGGLE false;
+  #define LOWPOWERMODE_TOGGLE false
+  #define AHT2X_TOGGLE false
+  #define BMP280_TOGGLE false
+  #define ENS160_TOGGLE false
+  #define PM1006K_TOGGLE false
+  #define PMSX003_TOGGLE false
+  #define SCD4X_TOGGLE false
+  #define SGP30_TOGGLE false
+  #define SHT31_TOGGLE false
+  #define SPS30_TOGGLE false
 #endif
 
 //device
@@ -137,6 +137,31 @@ bool SGP30_toggle = SGP30_TOGGLE;
 bool SHT31_toggle = SHT31_TOGGLE;
 bool SPS30_toggle = SPS30_TOGGLE;
 
+#define SENSOR_COUNT 9
+bool* toggles[SENSOR_COUNT] = {
+    &AHT2x_toggle,
+    &BMP280_toggle,
+    &ENS160_toggle,
+    &PM1006K_toggle,
+    &PMSx003_toggle,
+    &SCD4x_toggle,
+    &SGP30_toggle,
+    &SHT31_toggle,
+    &SPS30_toggle
+};
+String toggleIDName[SENSOR_COUNT][2] = {
+    {"AHT2x_toggle", "AHT2x"},
+    {"BMP280_toggle", "BMP280"},
+    {"ENS160_toggle", "ENS160"},
+    {"PM1006K_toggle", "PM1006K"},
+    {"PMSx003_toggle", "PMSx003"},
+    {"SCD4x_toggle", "SCD4x"},
+    {"SGP30_toggle", "SGP30"},
+    {"SHT31_toggle", "SHT31"},
+    {"SPS30_toggle", "SPS30"}
+};
+
+bool wifiConnectionType; //0 hotspot, 1 wifi
 bool reconfigure=0;
 bool runningTasks=1;
 bool sensorStart=1;
@@ -154,7 +179,7 @@ float sht31_temp=nan(""), sht31_hum=nan("");
 float sps30_pm1_0 = nan(""), sps30_pm2_5 = nan(""), sps30_pm10_0 = nan("");
 
 //TODO update sw/hw version
-String SWversion="3.0"; //software version
+String SWversion="3.1.0"; //software version
 String HWversion="0.1"; //hardware version
 String Model="Weatherstation";
 String ModelID=device; //ESP32, SEEED_XIAO_ESP32C3... 
