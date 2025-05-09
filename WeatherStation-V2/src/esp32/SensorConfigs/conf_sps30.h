@@ -11,6 +11,7 @@ void sps30Reconfigure()
     taskManager.cancelTask(SPS30_task);
 
     ///sps30=Adafruit_SPS30();
+    sps30_stop_measurement();
     sensirion_i2c_release();
 
 }
@@ -20,16 +21,20 @@ void sps30Read()
 
         uint16_t data_ready;
         int16_t ret;
-
         struct sps30_measurement m;
-        if(sps30_read_data_ready(&data_ready)) 
+        ret=sps30_read_data_ready(&data_ready);
+        Serial.println(ret);
+
+        if(ret)
         {
             sps30_read_measurement(&m);
             sps30_pm1_0=m.mc_1p0;
             sps30_pm2_5=m.mc_2p5;
             sps30_pm10_0=m.mc_10p0;
-        }else {
-            
+            sps30_stop_measurement();
+            sensirion_i2c_release();
+
+            sensirion_i2c_init();
             sps30_start_measurement();
         }
 }
@@ -53,8 +58,8 @@ void sps30SetupSend()
 
         sensirion_i2c_init();
         sps30_set_fan_auto_cleaning_interval_days(4); //every 4 days clean
-        sps30_start_measurement();
         //sps30_start_manual_fan_cleaning();
+        sps30_start_measurement();
 
 
         char status_topic[mqtt_messageRoot.length() + 1];

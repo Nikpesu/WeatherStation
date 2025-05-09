@@ -1,4 +1,5 @@
 
+
 String IpAddress2String(const IPAddress& ipAddress)
 {
   return String(ipAddress[0]) + String(".") +\
@@ -6,19 +7,61 @@ String IpAddress2String(const IPAddress& ipAddress)
   String(ipAddress[2]) + String(".") +\
   String(ipAddress[3])  ; 
 }
+String rssiToChart(int8_t value){
+  if(value>-70) return "[▂▃▅▇]";
+  else if(value>-85) return "[▂▃▅▁]";
+  else if(value>-100) return "[▂▃▁▁]";
+  else return "[▂▁▁▁]";
+}
+
+
+void httpWiFi()
+{
+  WiFi.scanDelete();
+  int networkNum=WiFi.scanNetworks(false, true);
+  
+  String networkJson="[";
+  for(int i=0; i<networkNum;i++)
+  {
+    networkJson+="{\"ssid\":\""+WiFi.SSID(i)+"\",";
+    networkJson+="\"rssi\":\""+(String)WiFi.RSSI(i)+rssiToChart(WiFi.RSSI(i))+"\"}"+(i<networkNum-1? ",":"");
+  }
+
+  networkJson+="]";
+  
+  server.send(200, "application/json",networkJson);
+}
+
+void httpSensors()
+{
+  String sensorsJson="[";
+  for(int i=0; i<SENSOR_COUNT; i++)
+  {
+
+    sensorsJson+="{\"sensorID\":\""+toggleIDName[i][0]+"\",";
+    sensorsJson+="\"sensorName\":\""+toggleIDName[i][1]+"\",";
+    sensorsJson+="\"sensorToggle\":" + (String)( (bool)*(toggles[i]) ? "true" : "false" ) +"}"+(i<SENSOR_COUNT-1? ",":"");
+    
+
+  }
+  sensorsJson+="]";
+  server.send(200, "application/json",sensorsJson);
+
+}
 void httpTitles()
 {
-  String signal;
-  if(WiFi.RSSI()>-70) signal="[▂▃▅▇]";
-  else if(WiFi.RSSI()>-85) signal="[▂▃▅▁]";
-  else if(WiFi.RSSI()>-100) signal="[▂▃▁▁]";
-  else signal="[▂▁▁▁]";;
+  String title3;
+
+  if(wifiConnectionType) 
+    title3=runningTime() + " | RSSI: " + WiFi.RSSI() + rssiToChart(WiFi.RSSI());
+  else 
+    title3=runningTime();
 
   server.send(200, "application/json", 
     "{"
     "\"title1\":\""+mdns_hostname+"\","
-    "\"title2\":\"SSID: "+ WiFi.SSID()+" | IP: "+WiFi.localIP().toString()+"\","
-    "\"title3\":\"Uptime:"+runningTime()+" | RSSI: "+WiFi.RSSI()+signal+"\""
+    "\"title2\":\"SSID: "+ (wifiConnectionType ? WiFi.SSID() : WiFi.softAPSSID())+" | IP: "+(wifiConnectionType ? WiFi.localIP() : WiFi.softAPIP()).toString()+"\","
+    "\"title3\":\"Uptime:"+title3+"\""
     "}");
 }
 
@@ -38,15 +81,11 @@ void httpConfig()
     ispis+="<br>mqtt_user: "+ mqtt_user;
     ispis+="<br>mqtt_messageRoot: "+ mqtt_messageRoot;
     ispis+="<br>mqtt_pass: "+ mqtt_password;
-    ispis+="<br>BMP280_toggle: "+ (String)BMP280_toggle;
-    ispis+="<br>SHT31_toggle: "+ (String)SHT31_toggle;
-    ispis+="<br>SGP30_toggle: "+ (String)SGP30_toggle;
-    ispis+="<br>AHT2x_toggle: "+ (String)AHT2x_toggle;
-    ispis+="<br>ENS160_toggle: "+ (String)ENS160_toggle;
-    ispis+="<br>SCD4x_toggle: "+ (String)SCD4x_toggle; 
-    ispis+="<br>PMSx003_toggle: "+ (String)PMSx003_toggle; 
-    ispis+="<br>PM1006K_toggle: "+ (String)PM1006K_toggle; 
-    ispis+="<br>SPS30_toggle: "+ (String)SPS30_toggle; 
+    //Sensor toggles
+    for(int i=0; i<SENSOR_COUNT; i++)
+    {//toggleIDName: i0-Sensor_Toggle i1-SensorName
+      ispis+="<br>"+toggleIDName[i][1]+": "+ *toggles[i];
+    }
     ispis+="<br>mdns_hostname: "+ mdns_hostname;
     ispis+="<br>hotspot_ssid: "+ hotspot_ssid;
     ispis+="<br>hotspot_pass: "+ hotspot_pass;
@@ -84,16 +123,8 @@ void httpHome()
   htmlContent.replace("\"hotspot_ssid\" value=\"\"", "\"hotspot_ssid\" value=\"" + hotspot_ssid + "\"");
   htmlContent.replace("\"hotspot_pass\" value=\"\"", "\"hotspot_pass\" value=\"" + (String)NO_PASS_CHANGE + "\"");
 
-  if(BMP280_toggle) htmlContent.replace("id=\"BMP280_toggle\"", "id=\"BMP280_toggle\" checked");
-  if(SHT31_toggle) htmlContent.replace("id=\"SHT31_toggle\"", "id=\"SHT31_toggle\" checked");
-  if(SGP30_toggle) htmlContent.replace("id=\"SGP30_toggle\"", "id=\"SGP30_toggle\" checked");
-  if(AHT2x_toggle) htmlContent.replace("id=\"AHT2x_toggle\"", "id=\"AHT2x_toggle\" checked");
-  if(ENS160_toggle) htmlContent.replace("id=\"ENS160_toggle\"", "id=\"ENS160_toggle\" checked");
-  if(SCD4x_toggle) htmlContent.replace("id=\"SCD4x_toggle\"", "id=\"SCD4x_toggle\" checked");
-  if(PMSx003_toggle) htmlContent.replace("id=\"PMSx003_toggle\"", "id=\"PMSx003_toggle\" checked");
-  if(PM1006K_toggle) htmlContent.replace("id=\"PM1006K_toggle\"", "id=\"PM1006K_toggle\" checked");
-  if(SPS30_toggle) htmlContent.replace("id=\"SPS30_toggle\"", "id=\"SPS30_toggle\" checked");
   if(lowPowerMode_toggle) htmlContent.replace("id=\"lowPowerMode_toggle\"", "id=\"lowPowerMode_toggle\" checked");
+
   htmlContent.replace("\"refreshTime\" value=\"\"", "\"refreshTime\" value=\"" + (String)refreshTime + "\"");
   server.send(200, "text/html", htmlContent);
 
@@ -129,20 +160,18 @@ void httpData()
     if(jsonDoc["mqtt_password"].as<String>()!=(String)NO_PASS_CHANGE) mqtt_password = jsonDoc["mqtt_password"].as<String>();
     else mqtt_password=oldMqttPass;
     mqtt_messageRoot = jsonDoc["mqtt_messageRoot"].as<String>();
-    BMP280_toggle = jsonDoc["BMP280_toggle"];
-    SHT31_toggle = jsonDoc["SHT31_toggle"];
-    SGP30_toggle = jsonDoc["SGP30_toggle"];
     mdns_hostname = jsonDoc["mdns_hostname"].as<String>();
     hotspot_ssid = jsonDoc["hotspot_ssid"].as<String>();
     if(jsonDoc["hotspot_pass"].as<String>()!=(String)NO_PASS_CHANGE) hotspot_pass = jsonDoc["hotspot_pass"].as<String>();	
     else hotspot_pass=oldHotspotPass;
-    AHT2x_toggle = jsonDoc["AHT2x_toggle"];
-    ENS160_toggle = jsonDoc["ENS160_toggle"]; 
-    PMSx003_toggle = jsonDoc["PMSx003_toggle"];
-    PM1006K_toggle = jsonDoc["PM1006K_toggle"];
-    SCD4x_toggle = jsonDoc["SCD4x_toggle"];
-    SPS30_toggle = jsonDoc["SPS30_toggle"];
     refreshTime = jsonDoc["refreshTime"];
+
+
+    //Sensor toggles
+    for(int i=0; i<SENSOR_COUNT; i++)
+    {//toggleIDName: i0-Sensor_Toggle i1-SensorName
+      *toggles[i]=jsonDoc[toggleIDName[i][0]];
+    }
 
 
     serializeJson(jsonDoc, Serial);
@@ -153,11 +182,38 @@ void httpData()
     jsonDoc.clear();
     loadConfig();
     readConfig();
-    server.send(200, "application/json", "{\"message\": \"ok\"}");
 
     delay(200);
-    sensorsBegin();// reload sensors
-    if(oldSSID!=wifi_ssid || oldWiFiPass!=wifi_pass)wifiStart();
+    if(wifiConnectionType)
+    {
+      if(wifi_ssid=="")
+      {
+        server.send(200, "application/json", "{\"message\": \"restarting device and turning on hotspot\"}");
+        delay(200);
+        rst();
+      }
+
+      if(oldSSID!=wifi_ssid || oldWiFiPass!=wifi_pass)
+      {
+        server.send(200, "application/json", "{\"message\": \"restarting sensors and connecting to new WiFi!\"}");
+        delay(200);
+        wifiStart();
+        sensorsBegin();// reload sensors
+      }
+      else
+      {
+        server.send(200, "application/json", "{\"message\": \"restarting sensors\"}");
+        delay(200);
+        sensorsBegin();// reload sensors
+      }
+      
+    }
+    else 
+    {
+      server.send(200, "application/json", "{\"message\": \"restarting device\"}");
+      delay(200);
+      rst();
+    }
   }
 }
 long  int timeout=0;
@@ -203,8 +259,9 @@ void wifiStart()
   server.on("/data", httpData);
   server.on("/restart", httpRestart);
   server.on("/titles", httpTitles);
+  server.on("/sensors", httpSensors);
   server.on("/currentConfig", httpConfig);
-
+  server.on("/wifi", httpWiFi);
   server.onNotFound(httpDefault);
   server.begin();
 
@@ -224,9 +281,9 @@ void apStart()
 
     WiFi.persistent(false);
     WiFi.disconnect(true);
-    WiFi.softAP("esp-captive");
+    WiFi.softAP(hotspot_ssid.c_str(), hotspot_pass.c_str());
 
-    WiFi.begin(hotspot_ssid == NULL ? "weatherstation_!" : hotspot_ssid.c_str(), hotspot_pass == NULL ? "" : hotspot_pass.c_str());
+    WiFi.begin();
     Serial.println("-----HOTSPOT-----");
     Serial.println("");
     Serial.print("SSID:");
@@ -246,7 +303,9 @@ void apStart()
   server.on("/data", httpData);
   server.on("/restart", httpRestart);
   server.on("/titles", httpTitles);
+  server.on("/sensors", httpSensors);
   server.on("/currentConfig", httpConfig);
+  server.on("/wifi", httpWiFi);
   server.onNotFound(httpDefault);
   server.begin();
 

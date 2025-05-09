@@ -1,6 +1,3 @@
-
-// 1 wifi 0 hotspot
-bool wifiCon;
 void startProgram()
 {
   
@@ -12,19 +9,19 @@ void startProgram()
   //Wire.begin(21,22,100000); //21,22 for esp32 devkitcv4
   Wire.begin(sda,scl,100000);
   // 1 wifi 0 hotspot
-  if(digitalRead(12)==false && wifi_ssid!="") 
+  if(digitalRead(12)==true || wifi_ssid=="") 
   {
-    Serial.println("Connection using Wi-Fi");
-    wifiCon=true;  
-    wifiStart();
-    mqttConnect();
-    sensorsBegin();
+    Serial.println("Connection using Hotspot");
+    wifiConnectionType=false;
+    apStart();
   }
   else
   { 
-    Serial.println("Connection using Hotspot");
-    wifiCon=false;
-    apStart();
+    Serial.println("Connection using Wi-Fi");
+    wifiConnectionType=true;  
+    wifiStart();
+    mqttConnect();
+    sensorsBegin();
   }
 
   //list dirs Serial.println("--XD--"); Dir dir = LittleFS.openDir(""); while (dir.next()) { Serial.println(dir.fileName()); File f = dir.openFile("r"); Serial.println(f.size()); } Serial.println("--XD--"); 
@@ -37,9 +34,10 @@ void sleepAndReset(){Serial.print("\nsleep And Reset"); ESP.deepSleep((refreshTi
 int counter=0;
 void loopedProgram()
 {
-  if(wifiCon)
+  int timestmp;
+  if(wifiConnectionType)
   {
-    int timestmp=millis();
+    timestmp=millis();
     if(!WiFi.status()==WL_CONNECTED) wifiStart();
     client.loop();
     taskManager.runLoop();
@@ -49,10 +47,10 @@ void loopedProgram()
     timestmp= 100-millis()+timestmp;
     delay(timestmp>0 ? timestmp : 0);
 
-    if(PM1006K_toggle and counter++==10)
+    if(counter++==10)
     {
-      pm1006kRead();
-      sps30Read();
+      if(PM1006K_toggle)pm1006kRead();
+      //if(SPS30_toggle) sps30Read();
       counter=0;
     } 
   }
@@ -62,13 +60,13 @@ void loopedProgram()
     server.handleClient();
     delay(10);
   }
-   // Serial.println(wifiCon);
+  Serial.println("["+runningTime()+"] loop time - "+(100-timestmp)+"ms");
 }
 
 String runningTime()
 {
   char buffer[10];
-  unsigned long seconds = millis() / 1000;
+  unsigned int  seconds = millis() / 1000;
   unsigned int days = seconds / 86400;
   unsigned int hours = (seconds / 3600) % 24;
   unsigned int minutes = (seconds / 60) % 60;
