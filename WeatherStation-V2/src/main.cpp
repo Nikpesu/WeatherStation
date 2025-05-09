@@ -21,6 +21,8 @@
 void setup()
 {
   Serial.begin(115200);
+  pinMode(2, INPUT_PULLUP);
+  //while(!Serial.available()) delay(10);
   Serial.println("\n-------WEATHERSTATION-------");
   startProgram();
 }

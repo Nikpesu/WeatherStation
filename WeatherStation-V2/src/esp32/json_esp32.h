@@ -1,7 +1,7 @@
 void loadConfig()
 {
   // Check if JSON exists, if not make a new one
-  if (!LittleFS.exists(JSON_FILE_PATH))
+  if (!LittleFS.exists(JSON_FILE_PATH) || !digitalRead(2))
   {
     Serial.println("novi config -- loadConfig");
     saveNewConfig();
@@ -39,6 +39,10 @@ void loadConfig()
       SGP30_toggle = json["SGP30_toggle"];
       ENS160_toggle = json["ENS160_toggle"];
       AHT2x_toggle = json["AHT2x_toggle"];
+      SCD4x_toggle = json["SCD4x_toggle"];
+      PMSx003_toggle = json["PMSx003_toggle"];
+      PM1006K_toggle = json["PM1006K_toggle"];
+      SPS30_toggle = json["SPS30_toggle"];
       lowPowerMode_toggle = json["lowPowerMode_toggle"];
       refreshTime = json["refreshTime"];
       mqtt_password = json["mqtt_password"].as<String>();
@@ -84,19 +88,23 @@ bool saveConfig()
   json["lowPowerMode_toggle"] = lowPowerMode_toggle;
   json["ENS160_toggle"] = ENS160_toggle;
   json["AHT2x_toggle"] = AHT2x_toggle;
+  json["SCD4x_toggle"] = SCD4x_toggle;
+  json["PMSx003_toggle"] = PMSx003_toggle;
+  json["PM1006K_toggle"] = PM1006K_toggle;
+  json["SPS30_toggle"] = SPS30_toggle;
 
   serializeJson(json, Serial);
-  Serial.print("   copied to JSON -- saveConfig");
+  Serial.println("   copied to JSON -- saveConfig -- ");
   // Open the JSON file for writing
   File configFile = LittleFS.open(JSON_FILE_PATH, "w");
 
-  Serial.print("   opened config file -- saveConfig");
+  Serial.println("   opened config file -- saveConfig");
   if (configFile)
   {
     // Serialize the JSON object into a buffer
     serializeJson(json, configFile);
     configFile.close();
-    Serial.print("-- copied to JSON -- saveConfig");
+    Serial.println("-- copied to JSON -- saveConfig");
     return true;
   }
   else
@@ -108,26 +116,9 @@ bool saveConfig()
 
 void saveNewConfig()
 {
-  wifi_ssid = "";
-  wifi_pass = "";
-  mqtt_server = "";
-  mqtt_port = 1883;
-  mqtt_user = "";
-  mqtt_password = "";
-  mqtt_messageRoot = "";
-  BMP280_toggle = true;
-  SHT31_toggle = true;
-  SGP30_toggle = true;
-  mdns_hostname = "weatherstation" + (String)rand();
-  hotspot_ssid = mdns_hostname;
-  hotspot_pass = "";
-  lowPowerMode_toggle = false;
-  refreshTime = 30;
-  ENS160_toggle = true;
-  AHT2x_toggle =true;
-
   saveConfig();
 }
+
 void readConfig()
 {
   loadConfig();
@@ -142,6 +133,10 @@ void readConfig()
   Serial.println(SGP30_toggle);
   Serial.println(ENS160_toggle);
   Serial.println(AHT2x_toggle);
+  Serial.println(SCD4x_toggle);
+  Serial.println(PMSx003_toggle);
+  Serial.println(PM1006K_toggle);
+  Serial.println(SPS30_toggle);
   Serial.println(mdns_hostname);
   Serial.println(hotspot_ssid);
   Serial.println(hotspot_pass);
