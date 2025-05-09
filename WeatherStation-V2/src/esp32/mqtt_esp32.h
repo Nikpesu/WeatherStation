@@ -6,83 +6,64 @@ void mqttSetup()
   ipaddr.fromString(mqtt_server);
   client.setServer(ipaddr, mqtt_port);
   client.setCallback(callback);
-  mqttSend();
+  client.setBufferSize(1024);
 }
 
-void mqttSend()
+void mqttConnect()
 {
+  mqttSetup();
+  if(client.connected()) client.disconnect();
   // Loop until we're reconnected
   while (!client.connected())
   {
-    Serial.print("Attempting MQTT connection...");
+    Serial.println("Attempting MQTT connection...");
     // Create a random client ID
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
+    String clientId = mdns_hostname+ESP.getEfuseMac();
+
     // Attempt to connect
-    String clientUser = (String)mqtt_messageRoot, clientPass = (String)mqtt_password;
-    if (client.connect(clientId.c_str(), clientUser.c_str(), clientPass.c_str()))
+    Serial.println(WiFi.status());
+    if (client.connect(clientId.c_str(), mqtt_user.c_str(), mqtt_password.c_str(), mqtt_messageRoot.c_str(), 1, true, "{\"state\":\"offline\"}"))
     {
-      char wsChar[mqtt_messageRoot.length() + 1];
-      mqtt_messageRoot.toCharArray(wsChar, mqtt_messageRoot.length() + 1);
-      client.publish(wsChar, "1", true);
+      client.publish(mqtt_messageRoot.c_str(), "{\"state\":\"online\"}", true);  // Send initial online message (retained)
+      Serial.println(" SUCCESS!");
     }
     else
     {
       Serial.print("failed, rc=");
-      Serial.print(client.state());
+      Serial.println(client.state());
       break;
     }
   }
 }
 
 void sendMqtt(String topic, String msg, bool retain)
-{
-  char topicChar[topic.length()+1];
-  topic.toCharArray(topicChar, topic.length()+1);
-  char msgChar[msg.length()+1];
-  msg.toCharArray(msgChar, msg.length()+1);
-  mqttSend();
+{ 
+  if (!client.connected()) mqttConnect();  // Only send if connected
+  if (!client.connected())
+  {
+    Serial.print("[");
+    Serial.print(runningTime());
+    Serial.print("] Couldnt send: ");
+    Serial.println(topic);
+    return;
+  } 
+  Serial.print("[");
+  Serial.print(runningTime());
+  Serial.print("] Sent topic: ");
+  Serial.println(topic);
+  Serial.println(msg);
+
+  // Convert String to char arrays
+  const char* topicChar = topic.c_str();
+  const char* msgChar = msg.c_str();
+
   client.publish(topicChar, msgChar, retain);
+
+  char status_topic[mqtt_messageRoot.length() + 1];
+  mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
+  client.publish(status_topic, "{\"state\":\"online\"}", true);  // Send initial online message (retained)
+
+  //Serial.println(topic);
+  //Serial.println(msg);
 }
 
-void sht31Send()
-{
-  sht31Read();
-  sendMqtt((mqtt_messageRoot + "/" + "SHT31/temp"), (String)sht31_temp, true);
-  sendMqtt((mqtt_messageRoot + "/" + "SHT31/hum"), (String)sht31_hum, true);
-  sendMqtt((mqtt_messageRoot + "/" + "SHT31/status"), (String)sht31.readStatus(), true);
-}
-
-void sgp30Send()
-{
-  sgp30Read();
-  sendMqtt((mqtt_messageRoot + "/" + "SGP30/TVOC"), (String)sgp30_tvoc, true);
-  sendMqtt((mqtt_messageRoot + "/" + "SGP30/eCO2"), (String)sgp30_co2, true);
-  sendMqtt((mqtt_messageRoot + "/" + "SGP30/ETH"), (String)sgp30_eth, true);
-  sendMqtt((mqtt_messageRoot + "/" + "SGP30/H2"), (String)sgp30_h2, true);
-}
-
-void bmp280Send()
-{
-  bmp280Read();
-  sendMqtt((mqtt_messageRoot + "/" + "BMP280/temp"), (String)bmp280_temp, true);
-  sendMqtt((mqtt_messageRoot + "/" + "BMP280/press"), (String)bmp280_press, true);
-  sendMqtt((mqtt_messageRoot + "/" + "BMP280/alt"), (String)bmp280_alt, true);
-  sendMqtt((mqtt_messageRoot + "/" + "BMP280/status"), (String)bmp280.getStatus(), true);
-}
-
-void AHT2xSend()
-{
-  AHT2xRead();
-  sendMqtt((mqtt_messageRoot + "/" + "AHT2x/temp"), (String)aht2x_temp, true);
-  sendMqtt((mqtt_messageRoot + "/" + "AHT2x/hum"), (String)aht2x_hum, true);
-  sendMqtt((mqtt_messageRoot + "/" + "AHT2x/status"), (String)aht20.getStatus(), true);
-}
-void ENS160Send()
-{
-  ENS160Read();
-  sendMqtt((mqtt_messageRoot + "/" + "ENS160/AQI"), (String)ens160_aqi, true);
-  sendMqtt((mqtt_messageRoot + "/" + "ENS160/TVOC"), (String)ens160_tvoc, true);
-  sendMqtt((mqtt_messageRoot + "/" + "ENS160/ECO2"), (String)ens160_eco2, true);
-  sendMqtt((mqtt_messageRoot + "/" + "ENS160/status"), (String)myENS.getFlags(), true); //Gas Sensor Status Flag (0 - Standard, 1 - Warm up, 2 - Initial Start Up): 
-}

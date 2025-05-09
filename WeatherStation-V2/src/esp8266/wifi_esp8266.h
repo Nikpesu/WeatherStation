@@ -124,6 +124,7 @@ void httpData()
     ENS160_toggle = jsonDoc["ENS160_toggle"];
     PMSx003_toggle = jsonDoc["PMSx003_toggle"];
     SCD4x_toggle = jsonDoc["SCD4x_toggle"];
+    refreshTime = jsonDoc["refreshTime"];
 
     serializeJson(jsonDoc, Serial);
     Serial.println("-- done pasrsing JSON -- http data");
