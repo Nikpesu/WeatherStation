@@ -8,10 +8,10 @@ void scd4xReconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(SCD4x_task);
+    ///taskManager.cancelTask(SCD4x_task);
         
-    scd4x=SensirionI2cScd4x();
-    //TODO add SCD4x sensor def
+    scd4x=SCD4x();
+    //scd4x=SensirionI2cScd4x();
     //taskManager.cancelTask(BMP280_task);
     //bmp280 = Adafruit_BMP280();
 
@@ -19,18 +19,19 @@ void scd4xReconfigure()
 
 void scd4xRead()
 {
-    uint16_t co2;
-    scd4x.readMeasurement(co2, scd4x_temp, scd4x_hum);
-    scd4x_co2=co2;
-
-    Serial.print("CO2 concentration [ppm]: ");
+    scd4x.readMeasurement();
+    scd4x_co2=scd4x.getCO2();
+    scd4x_temp=scd4x.getTemperature();
+    scd4x_hum=scd4x.getHumidity();
+    Serial.println();
+    Serial.print(F("CO2(ppm):"));
     Serial.print(scd4x_co2);
-    Serial.println();
-    Serial.print("Temperature [°C]: ");
-    Serial.print(scd4x_temp);
-    Serial.println();
-    Serial.print("Relative Humidity [RH]: ");
-    Serial.print(scd4x_hum);
+
+    Serial.print(F("\tTemperature(C):"));
+    Serial.print(scd4x_temp, 1);
+
+    Serial.print(F("\tHumidity(%RH):"));
+    Serial.print(scd4x_hum, 1);
     Serial.println();
 
 }
@@ -51,8 +52,7 @@ void scd4xSetupSend()
     if(sensorStart==1)
     {
         
-        //TODO add SCD4x sensor def
-            scd4x.begin(Wire, 0x62);//SCD40 0x62 | SCD41 0x62
+            scd4x.begin();//SCD40 0x62 | SCD41 0x62
             scd4x.startPeriodicMeasurement();
         
             char status_topic[mqtt_messageRoot.length() + 1];
@@ -105,7 +105,7 @@ void scd4xSetupSend()
 
         if(!lowPowerMode_toggle)
         {
-            SCD4x_task = taskManager.scheduleFixedRate(refreshTime,scd4xSetupSend,TIME_SECONDS);
+            //SCD4x_task = taskManager.scheduleFixedRate(refreshTime,scd4xSetupSend,TIME_SECONDS);
             runningTasks=1;
         }
         else

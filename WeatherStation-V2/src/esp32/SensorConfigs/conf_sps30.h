@@ -8,9 +8,11 @@ void sps30Reconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(SPS30_task);
+    //taskManager.cancelTask(SPS30_task);
 
     ///sps30=Adafruit_SPS30();
+    //sps30=SPS30();
+
     sps30_stop_measurement();
     sensirion_i2c_release();
 
@@ -18,12 +20,10 @@ void sps30Reconfigure()
 
 void sps30Read()
 {
-
         uint16_t data_ready;
         int16_t ret;
         struct sps30_measurement m;
         ret=sps30_read_data_ready(&data_ready);
-        Serial.println(ret);
 
         if(ret)
         {
@@ -37,6 +37,12 @@ void sps30Read()
             sensirion_i2c_init();
             sps30_start_measurement();
         }
+      //  if(sps30.dataAvailable())
+      //  {
+      //      sps30_pm1_0=sps30.numPM1;
+      //      sps30_pm2_5=sps30.numPM25;
+      //      sps30_pm10_0=sps30.numPM10;
+      //  }
 }
 
 void sps30SetupSend()
@@ -55,13 +61,14 @@ void sps30SetupSend()
     if(sensorStart==1)
     {
         // https://github.com/kevinlutzer/Arduino-sps30/blob/main/examples/sps30test/sps30test.ino
+        // sps30.begin();
 
         sensirion_i2c_init();
         sps30_set_fan_auto_cleaning_interval_days(4); //every 4 days clean
         //sps30_start_manual_fan_cleaning();
         sps30_start_measurement();
 
-
+        
         char status_topic[mqtt_messageRoot.length() + 1];
         mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
         // Sending MQTT Discovery messages for each PM sensor (pm1_0, pm2_5, pm10_0)
@@ -113,7 +120,7 @@ void sps30SetupSend()
         // Handle sensor readings and refresh if not in low power mode
         if (!lowPowerMode_toggle)
         {
-            SPS30_task = taskManager.scheduleFixedRate(refreshTime,sps30SetupSend,TIME_SECONDS);
+            //SPS30_task = taskManager.scheduleFixedRate(refreshTime,sps30SetupSend,TIME_SECONDS);
             runningTasks=1;
         }
         else

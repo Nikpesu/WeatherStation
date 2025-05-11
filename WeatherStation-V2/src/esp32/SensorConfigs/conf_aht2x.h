@@ -8,7 +8,8 @@ void aht2xReconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(AHT2x_task);
+    //taskManager.cancelTask(AHT2x_task);
+    //AHT2x_running=0;
     aht2x=AHTxx(AHTXX_ADDRESS_X38, AHT2x_SENSOR);
 }
 
@@ -44,7 +45,6 @@ void aht2xSetupSend()
     if(sensorStart==1)
     {
         aht2x.begin();
-
         
             char status_topic[mqtt_messageRoot.length() + 1];
             mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
@@ -95,7 +95,8 @@ void aht2xSetupSend()
 
         if(!lowPowerMode_toggle)
         {
-            AHT2x_task = taskManager.scheduleFixedRate(refreshTime,aht2xSetupSend,TIME_SECONDS);
+            //AHT2x_task = taskManager.scheduleFixedRate(refreshTime,aht2xSetupSend,TIME_SECONDS);
+            //AHT2x_running=1;
             runningTasks=1;
         }
         else

@@ -8,33 +8,46 @@
 #include "SensorConfigs/conf_sht31.h"
 #include "SensorConfigs/conf_sps30.h"
 
+void allSetupSend()
+{
+    if(AHT2x_toggle) aht2xSetupSend();    
+    if(BMP280_toggle) bmp280SetupSend();
+    if(ENS160_toggle)	ens160SetupSend();
+    if(PM1006K_toggle) pm1006kSetupSend();
+    if(PMSx003_toggle) pmsx003SetupSend();
+    if(SCD4x_toggle) scd4xSetupSend(); 
+    if(SGP30_toggle) sgp30SetupSend(); 
+    if(SHT31_toggle) sht31SetupSend();
+    if(SPS30_toggle) sps30SetupSend();
+}
+
+void allReconfigure()
+{
+  aht2xReconfigure();    
+  bmp280Reconfigure();
+  ens160Reconfigure();
+  pm1006kReconfigure();
+  pmsx003Reconfigure();
+  scd4xReconfigure(); 
+  sgp30Reconfigure(); 
+  sht31Reconfigure();
+  sps30Reconfigure();
+  allSetupSend();
+}
+
 void sensorsBegin()
 { 
   sensorStart=1;
+  Wire.end();
+  Wire.begin(sda,scl,100000);
 
   if(runningTasks)
   {
-    aht2xReconfigure();
-    bmp280Reconfigure();
-    ens160Reconfigure();
-    pm1006kReconfigure();
-    pmsx003Reconfigure();
-    scd4xReconfigure();
-    sgp30Reconfigure();
-    sht31Reconfigure();
-    sps30Reconfigure();
+    allReconfigure();
     runningTasks=0;
   }
 
-  if(AHT2x_toggle) aht2xSetupSend();    
-  if(BMP280_toggle) bmp280SetupSend();
-  if(ENS160_toggle)	ens160SetupSend();
-  if(PM1006K_toggle) pm1006kSetupSend();
-  if(PMSx003_toggle) pmsx003SetupSend();
-  if(SCD4x_toggle) scd4xSetupSend(); 
-  if(SGP30_toggle) sgp30SetupSend(); 
-  if(SHT31_toggle) sht31SetupSend();
-  if(SPS30_toggle) sps30SetupSend();
+  allSetupSend();
 
   sensorStart=0;  
 
@@ -43,6 +56,17 @@ void sensorsBegin()
     delay(1000); sleepAndReset();
   }
 
+}
+int lastSensorTriggerTime=millis();
+void sensorLoop()
+{
+  int currTime=millis();
+  int limitTime=lastSensorTriggerTime+refreshTime*1000;
+  if(limitTime<currTime)
+  {
+    allSetupSend();
+    lastSensorTriggerTime=millis();
+  }
 }
 
 int getAbsoluteHumidity(float temperature, float humidity)

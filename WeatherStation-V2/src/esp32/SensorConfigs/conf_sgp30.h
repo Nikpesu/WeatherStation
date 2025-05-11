@@ -8,7 +8,7 @@ void sgp30Reconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(SGP30_task);
+    //taskManager.cancelTask(SGP30_task);
     sgp30=Adafruit_SGP30();
 
 }
@@ -98,7 +98,7 @@ void sgp30SetupSend()
 
         if(!lowPowerMode_toggle)
         {
-            SGP30_task = taskManager.scheduleFixedRate(refreshTime,sgp30SetupSend,TIME_SECONDS);
+            //SGP30_task = taskManager.scheduleFixedRate(refreshTime,sgp30SetupSend,TIME_SECONDS);
             runningTasks=1;
         }
         else

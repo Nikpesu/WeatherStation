@@ -1,23 +1,25 @@
 void startProgram()
 {
   
+  pinMode(HOTSPOT_PIN, INPUT_PULLUP);
+  pinMode(RESET_CONFIG_PIN, INPUT_PULLUP);
   if(!LittleFS.begin()){
-    Serial.println("An Error has occurred while mounting LittleFS");
+    Serial.println("["+runningTime()+"] An Error has occurred while mounting LittleFS");
     return;
   }
   loadConfig(); 
   //Wire.begin(21,22,100000); //21,22 for esp32 devkitcv4
   Wire.begin(sda,scl,100000);
   // 1 wifi 0 hotspot
-  if(digitalRead(12)==true || wifi_ssid=="") 
+  if(digitalRead(HOTSPOT_PIN)==false || wifi_ssid=="") 
   {
-    Serial.println("Connection using Hotspot");
+    Serial.println("["+runningTime()+"] Connection using Hotspot");
     wifiConnectionType=false;
     apStart();
   }
   else
   { 
-    Serial.println("Connection using Wi-Fi");
+    Serial.println("["+runningTime()+"] Connection using Wi-Fi");
     wifiConnectionType=true;  
     wifiStart();
     mqttConnect();
@@ -28,24 +30,38 @@ void startProgram()
   ArduinoOTA.onEnd(rst);
 }
 
-void rst(){ESP.restart();}
-void sleepAndReset(){Serial.print("\nsleep And Reset"); ESP.deepSleep((refreshTime-5)*1e6); rst();} //1s = 1e6
+void rst(){
+  ESP.restart();
+}
 
-int counter=0;
+void sleepAndReset(){
+  Serial.print("["+runningTime()+"] Sleep for "+(refreshTime-5)+"s And Reset!"); 
+  ESP.deepSleep((refreshTime-5)*1e6);
+  rst();
+} //1s = 1e6
+
+unsigned int avgTime=0;
+unsigned int counter=0;
+unsigned int counter2=0;
 void loopedProgram()
 {
-  int timestmp;
+  int timeStart;
+  int timeTook;
   if(wifiConnectionType)
   {
-    timestmp=millis();
+    timeStart=millis();
     if(!WiFi.status()==WL_CONNECTED) wifiStart();
+
     client.loop();
-    taskManager.runLoop();
+    ///taskManager.runLoop();
+    sensorLoop();
     //dnsServer.processNextRequest();
     ArduinoOTA.handle();
     server.handleClient();
-    timestmp= 100-millis()+timestmp;
-    delay(timestmp>0 ? timestmp : 0);
+    
+    timeTook=millis()-timeStart;
+    timeStart= 100-timeTook;
+    delay(timeStart>0 ? timeStart : 0);
 
     if(counter++==10)
     {
@@ -56,11 +72,34 @@ void loopedProgram()
   }
   else
   {
+    timeStart=millis();
+
     dnsServer.processNextRequest();
     server.handleClient();
-    delay(10);
+
+    timeTook=millis()-timeStart;
+    timeStart= 10-timeTook;
+    delay(timeStart>0 ? timeStart : 0);
   }
-  Serial.println("["+runningTime()+"] loop time - "+(100-timestmp)+"ms");
+  avgTime+=(100-timeStart);
+  if(counter2++==99)
+  {
+    delay(timeStart>0 ? timeStart : 0);
+
+    Serial.print("["+runningTime()+"] " + "INFO:");
+    Serial.print("\n\t\tAVG last 100 loop time: "+(String)(avgTime/100)+ "ms");
+    Serial.print("\n\t\tFS use: "+(String)(LittleFS.usedBytes()/1024)+"KB/"+(String)(LittleFS.totalBytes()/1024)+"KB");
+    Serial.print("\n\t\tIP: "+ (wifiConnectionType ? WiFi.localIP() : WiFi.softAPIP()).toString());
+    Serial.print("\n\t\tConnection type: " + (String)(wifiConnectionType?"WiFi":"Hotspot") );
+    if(!wifiConnectionType)Serial.print
+      ("\n\t\tHotspot password: " + hotspot_pass);
+    Serial.print("\n\t\tDefault config pin: " + (String)RESET_CONFIG_PIN);
+    Serial.print("\n\t\tHotspot pin: " + (String)HOTSPOT_PIN);
+    Serial.println();
+
+    counter2=0;
+    avgTime=0;
+  }
 }
 
 String runningTime()
