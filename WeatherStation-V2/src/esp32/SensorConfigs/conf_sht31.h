@@ -8,7 +8,7 @@ void sht31Reconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(SHT31_task);
+    //taskManager.cancelTask(SHT31_task);
     sht31=Adafruit_SHT31();
 
 }
@@ -92,7 +92,7 @@ void sht31SetupSend()
 
         if(!lowPowerMode_toggle)
         {
-            SHT31_task = taskManager.scheduleFixedRate(refreshTime,sht31SetupSend,TIME_SECONDS);
+            //SHT31_task = taskManager.scheduleFixedRate(refreshTime,sht31SetupSend,TIME_SECONDS);
             runningTasks=1;
         }
         else

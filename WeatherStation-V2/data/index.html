@@ -7,19 +7,22 @@
   <link rel="icon" type="image/x-icon"
     href="https://www.espressif.com/sites/all/themes/espressif/images/esp32-c61/icon-series-mobile.png">
   <style>
-    body{
+    body {
       margin: 0px;
       padding: 0px;
       display: flex;
       flex-direction: column;
       max-width: 100vw;
-      
+
     }
-    h2, h3{
+
+    h2,
+    h3 {
       width: 90%;
       margin-top: 0px;
       text-align: center;
     }
+
     form {
       display: flex;
       align-items: center;
@@ -29,7 +32,8 @@
       font-size: large;
       font-weight: bold;
     }
-    form>div{
+
+    form>div {
       max-width: 80%;
     }
 
@@ -88,35 +92,38 @@
 
     select:hover {
       border-color: rgb(82, 82, 82);
-      background-color: rgb(175, 175, 175) !important ;
+      background-color: rgb(175, 175, 175) !important;
       transition: 0.2s;
       color: rgb(0, 0, 0);
     }
-    #updateDropdownBtn
-    {
-      min-width: 4em; 
-      height: 100%; 
+
+    #updateDropdownBtn {
+      min-width: 4em;
+      height: 100%;
       margin-top: 0px;
     }
-    #dropdowndiv{
+
+    #dropdowndiv {
       margin-top: 0.2em;
-      height: 5em; 
-      width: 100%; 
+      height: 5em;
+      width: 100%;
     }
-    select, select:focus
-    {
+
+    select,
+    select:focus {
       padding: 0.35em;
-      height: auto; 
-      width: 100%; 
+      height: auto;
+      width: 100%;
       margin-left: 1em;
       font-size: 1em;
 
     }
 
-    select, select:focus{
+    select,
+    select:focus {
       padding: 0.35em;
       font-size: 1.6em;
-      background-color: gainsboro !important ;
+      background-color: gainsboro !important;
       border-radius: 0.3em;
       border: gray 1px solid;
       transition: 0.2s;
@@ -124,9 +131,9 @@
     }
 
 
-    
-    option{
-      
+
+    option {
+
       background-color: gainsboro;
     }
 
@@ -162,155 +169,235 @@
   </style>
   <script defer async>
 
+    function updateSSIDClick() {
+      let dropdown = document.getElementById('wifi_ssid_dropdown');
+      let selectedText = dropdown.options[dropdown.selectedIndex].value
+      document.getElementById('wifi_ssid').value = selectedText;
+      console.log("set wifi: " + selectedText);
+    }
 
-      function updateSSIDClick()
-      {
-        let dropdown = document.getElementById('wifi_ssid_dropdown');
-        let selectedText = dropdown.options[dropdown.selectedIndex].value
-        document.getElementById('wifi_ssid').value=selectedText;
-        console.log("set wifi: "+selectedText);
-      }
-      
-      async function updateSSIDDropdown()
-      {
-        document.getElementById('wifi_ssid_dropdown').innerHTML='<option onClick="updateSSIDClick()" value="'+document.getElementById('wifi_ssid').value+'" >Updating...</option>';
-        //return;
-        try{
+    function updateSSIDClick() {
+      let dropdown = document.getElementById('wifi_ssid_dropdown');
+      let selectedText = dropdown.options[dropdown.selectedIndex].value
+      document.getElementById('wifi_ssid').value = selectedText;
+      console.log("set wifi: " + selectedText);
+    }
+   
+    async function updateSSIDDropdown() {
+      document.getElementById('wifi_ssid_dropdown').innerHTML = '<option onClick="updateSSIDClick()" value="' + document.getElementById('wifi_ssid').value + '" >Updating...</option>';
+      //return;
+      try {
         const response = await fetch('/wifi');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
           return;
         }
         const data = await response.json();
+        console.log(data);
 
-        let ssidDropdownHtml="";
+        let ssidDropdownHtml = "";
         //const data=JSON.parse(jsonString);
-          console.log(data[0].sensorID);
-          for(let i=0; i<data.length; i++)
-          {
-            ssidDropdownHtml+=
-              '<option onClick="updateSSIDClick()" value="'+data[i].ssid+'">'+data[i].rssi+" "+data[i].ssid+'</option>\n';
-          }
-          console.log(ssidDropdownHtml);
-          document.getElementById('wifi_ssid_dropdown').innerHTML=ssidDropdownHtml;
-        } catch (error)
-        {
-          console.log(document.getElementById('wifi_ssid_dropdown').innerHTML);
-          document.getElementById('wifi_ssid_dropdown').innerHTML='<option value="dsa" onClick="updateSSIDClick()" >error</option>';
+        console.log(data[0].sensorID);
+        for (let i = 0; i < data.length; i++) {
+          ssidDropdownHtml +=
+            '<option onClick="updateSSIDClick()" value="' + data[i].ssid + '">' + data[i].rssi + " " + data[i].ssid + '</option>\n';
         }
+        console.log(ssidDropdownHtml);
+        document.getElementById('wifi_ssid_dropdown').innerHTML = ssidDropdownHtml;
+      } catch (error) {
+        console.log(document.getElementById('wifi_ssid_dropdown').innerHTML);
+        document.getElementById('wifi_ssid_dropdown').innerHTML = '<option value="dsa" onClick="updateSSIDClick()" >error</option>';
       }
+    }
+    
+    let isFetching=0;
+    async function fetchTitles() {
+      if(isFetching) return;
+      try {
+        isFetching=1;
+        const response = await fetch('/titles');
+        if (!response.ok) {
+          console.error(`HTTP error! status: ${response.status}`);
+          document.getElementById('title3').textContent = 'Error fetching ' + location.protocol + '//' + location.hostname + ':' + location.port + '/titles';
+          return;
+        }
+        const data = await response.json();
+        console.log(data);
+        document.getElementById('title1').textContent = data.title1;
+        document.getElementById('title2').textContent = data.title2;
+        document.getElementById('title3').textContent = data.title3;
+      } catch (error) {
+        console.error('Error:', error);
+      }
+      finally{
+        isFetching=0;
+      }
+    }
 
-      async function makeSensors()
-      {
-      let buttonHtml="";
-       const response = await fetch('/sensors');
+    let buttonHtml = "";
+    let isMaking=0;
+    let firstRun=1;
+    async function makeSensors() {
+      if(isMaking)return;
+      isMaking=1;
+      try{
+        const response = await fetch('/sensors');
         if (!response.ok) {
           console.error(`HTTP error! status: ${response.status}`);
           return;
         }
         const data = await response.json();
+        console.log(data);
 
-      //const data=JSON.parse(jsonString);
+        //const data=JSON.parse(jsonString);
         console.log(data[0].sensorID);
-        for(let i=0; i<data.length; i++)
-        {
-          buttonHtml+=
-            '<div class="senzor">\n'+
-              '<label for="'+data[i].sensorID+'">'+data[i].sensorName+'</label>\n'+
-              '<input type="checkbox" placeholder="'+data[i].sensorID+'" required name="'+data[i].sensorID+'" id="'+data[i].sensorID+'" '+(data[i].sensorToggle? 'checked':'')+'  value="">\n'+
+
+        buttonHtml = "";
+        for (let i = 0; i < data.length; i++) {
+          buttonHtml +=
+            '<div class="senzor">\n' +
+            '<label for="' + data[i].sensorID + '">' + data[i].sensorName + '</label>\n' +
+            '<input type="checkbox" placeholder="' + data[i].sensorID + '" required name="' + data[i].sensorID + '" id="' + data[i].sensorID + '" ' + (data[i].sensorToggle ? 'checked' : '') + '  value="">\n' +
             '</div>\n';
         }
         console.log(buttonHtml);
-        document.getElementById('sensors').innerHTML=buttonHtml;
+        document.getElementById('sensors').innerHTML = buttonHtml;
       }
+      catch (exception)
+      {
+        console.log(exception);
+      }
+      finally
+      {
+        isMaking=0;
+      }
+      
+    }
+
+    async function makeFirstFieldBlock() {
+      let fieldsHtml = "";
+			//const data = [{"fieldID":"fieldID","labelText":"labelText","value":"value","placeholder":"placeholder"}];
+      await makeSensors();
+      const response = await fetch('/fields');
+      if (!response.ok) {
+        console.error(`HTTP error! status: ${response.status}`);
+        return;
+      }
+      const data = await response.json();
+      console.log(data);
+      //const data=JSON.parse(jsonString);
+      for (let i = 0; i < data.length; i++) {
+        if(data[i].fieldID==="mdns_hostname")
+          fieldsHtml += '<label for="sensors">Sensors:</label><div id="sensors" class="senzori"></div><br>'
+
+        if(data[i].type==="checkbox")
+          fieldsHtml +=
+            '<label for="' + data[i].fieldID + '">' + data[i].labelText + '</label></br>\n' +
+            '<input style="width: 100%;" type="'+ data[i].type +'" placeholder="' + data[i].placeholder + '" required name="' + data[i].fieldID + '" id="' + data[i].fieldID + '" '+(Boolean(Number(data[i].value)) ? 'checked':'')+'>\n';
+
+
+        if(data[i].type==="text" || data[i].type==="password" || data[i].type==="number")
+          fieldsHtml +=
+            '<label for="' + data[i].fieldID + '">' + data[i].labelText + '</label></br>\n' +
+            '<input style="width: 100%;" type="'+ data[i].type +'" placeholder="' + data[i].placeholder + '" required name="' + data[i].fieldID + '" id="' + data[i].fieldID + '" value="'+data[i].value+'">\n';
+      }
+      console.log(fieldsHtml);
+      document.getElementById('fields1').innerHTML = fieldsHtml;
+      document.getElementById('sensors').innerHTML = buttonHtml;
+      //document.getElementById('sensors').innerHTML = buttonHtml;
+      fetchTitles();
+      if(firstRun)setInterval(fetchTitles, 1000);
+      firstRun=0;
+    }
 
 
     let isSendingData = false;
-async function sendData() {
-  if (isSendingData) return;  // prevent multiple calls
-  isSendingData = true;
+    async function sendData() {
+      if (isSendingData) return;  // prevent multiple calls
+      isSendingData = true;
 
-  const button = document.getElementById('SubmitBtn');
-  const originalText = button.value;
-  const originalBackground = button.style.backgroundColor;
+      const button = document.getElementById('SubmitBtn');
+      const originalText = button.value;
+      const originalBackground = button.style.backgroundColor;
 
-  try {
-      // Disable the button and show sending state
-      button.disabled = true;
-      button.style.pointerEvents = 'none';
-      button.style.backgroundColor = 'orange';
-      button.value = 'Sending...';
+      try {
+        // Disable the button and show sending state
+        button.disabled = true;
+        button.style.pointerEvents = 'none';
+        button.style.backgroundColor = 'orange';
+        button.value = 'Sending...';
 
-      // Gather form data
-      const getValue = id => {
-        const el = document.getElementById(id);
-        return el.type === 'checkbox' ? el.checked : el.value;
-      };
+        // Gather form data
+        const getValue = id => {
+          const el = document.getElementById(id);
+          return el.type === 'checkbox' ? el.checked : el.value;
+        };
 
-      const fields = [
-        'wifi_ssid', 'wifi_pass', 'mqtt_server', 'mqtt_port', 'mqtt_user', 'mqtt_password', 'mqtt_messageRoot',
-        'BMP280_toggle', 'SHT31_toggle', 'SGP30_toggle', 'AHT2x_toggle', 'ENS160_toggle', 'SCD4x_toggle',
-        'PMSx003_toggle', 'PM1006K_toggle', 'SPS30_toggle', 'mdns_hostname', 'hotspot_ssid', 'hotspot_pass',
-        'lowPowerMode_toggle', 'refreshTime'
-      ];
-
-      const data = fields.reduce((obj, field) => {
-        obj[field] = getValue(field);
-        return obj;
-      }, {});
-
-
-      const response = await fetch('/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const sensorIDresponse = await fetch('/sensorAndFieldsIDs');
+      if (!sensorIDresponse.ok) {
+        console.error(`HTTP error! status: ${sensorIDresponse.status}`);
+        return;
       }
+      const sensorIDs = await sensorIDresponse.json();
+      console.log(sensorIDs);
 
-      const result = await response.json();  // parse JSON response
 
-      // OPTIONAL: Check server message
-      if (result.message === "bad!") {
-        throw new Error("JSON failed parsing on server");
+        const data = sensorIDs.reduce((obj, field) => {
+          obj[field] = getValue(field);
+          return obj;
+        }, {});
+
+
+        const response = await fetch('/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();  // parse JSON response
+
+        // OPTIONAL: Check server message
+        if (result.message === "bad!") {
+          throw new Error("JSON failed parsing on server");
+        }
+        console.log('Server status:', response.status);
+        console.log('Server response:', result);
+
+        // Success
+        button.value = result.message;
+        button.style.backgroundColor = 'green';
+
+      } catch (error) {
+        button.style.backgroundColor = 'red';
+        button.value = "Error! Check console";
+        console.error('Request error:', error);
+      } finally {
+
+        setTimeout(() => {
+          button.value = originalText;
+          button.disabled = false;
+          button.style.pointerEvents = 'auto';
+          button.style.backgroundColor = originalBackground;
+          isSendingData = false;
+        }, 2000);
+
+        // OPTIONAL: If you used the timeout, clear it here
+        // clearTimeout(timeout);
       }
-      console.log('Server status:', response.status);
-      console.log('Server response:', result);
-
-      // Success
-      button.value = result.message;
-      button.style.backgroundColor = 'green';
-
-    } catch (error) {
-      button.style.backgroundColor = 'red';
-      button.value = "Error! Check console";
-      console.error('Request error:', error);
-    } finally {
-      
-      setTimeout(() => {
-        button.value = originalText;
-        button.disabled = false;
-        button.style.pointerEvents = 'auto';
-        button.style.backgroundColor = originalBackground;
-        isSendingData = false;
-      }, 2000);
-
-      // OPTIONAL: If you used the timeout, clear it here
-      // clearTimeout(timeout);
     }
-  }
-    
-    let isRestarting = false;  // global flag
 
+    let isRestarting = false;  // global flag
     async function restartESP() {
       if (isRestarting) return;  // prevent multiple calls
       isRestarting = true;
       const button = document.getElementById('restartBtn');
       button.disabled = true;
       button.style.pointerEvents = 'none';
-      
+
       try {
         button.value = "Restarting...";
         const response = await fetch('/restart');
@@ -320,6 +407,7 @@ async function sendData() {
         }
 
         const data = await response.json();
+        console.log(data);
         button.value = data.restart || "RESTARTED!";
 
       } catch (error) {
@@ -335,24 +423,6 @@ async function sendData() {
       }
     }
 
-
-    async function fetchTitles() {
-      try {
-        const response = await fetch('/titles');
-        if (!response.ok) {
-          console.error(`HTTP error! status: ${response.status}`);
-          document.getElementById('title3').textContent = 'Error fetching '+location.protocol+'//'+location.hostname+':'+location.port+'/titles';
-          return;
-        }
-        const data = await response.json();
-        document.getElementById('title1').textContent = data.title1;
-        document.getElementById('title2').textContent = data.title2;
-        document.getElementById('title3').textContent = data.title3;
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    }
-
   </script>
 </head>
 
@@ -360,76 +430,51 @@ async function sendData() {
   <h1 style="align-self: center;" id="title1">Weatherstation</h1>
   <h2 style="align-self: center;" id="title2"></h2>
   <h3 style="align-self: center;" id="title3"></h3>
-    <form id="myForm" onsubmit="return false;">
-      <div> 
-              
-        <label for="wifi_ssid_dropdown">Scan WiFi:</label>
-        <div style="width: 100%; display: flex;" id="dropdowndiv">
-          <input type="button" id="updateDropdownBtn" value="Update" onclick="updateSSIDDropdown()" >
-          <select name="wifis" id="wifi_ssid_dropdown">
-            <option value="">Click button to update</option>
-          </select>
+  <form id="myForm" onsubmit="return false;">
+    <div>
 
-        </div>
-        
-        <label for="wifi_ssid">WiFi SSID:</label>
-        <input type="text" placeholder="SSID" required name="wifi_ssid" id="wifi_ssid" value="">
-        <label for="wifi_pass">WiFi Password:</label>
-        <input type="password" placeholder="PASS" required name="wifi_pass" id="wifi_pass" value="" onClick="select()"><br>
-        <label for="mqtt_server">MQTT Server:</label>
-        <input type="text" placeholder="Mosquitto IP" required name="mqtt_server" id="mqtt_server" value="">
-        <label for="mqtt_port">MQTT Port:</label>
-        <input type="number" placeholder="1883" required name="mqtt_port" id="mqtt_port" value="">
-        <label for="mqtt_user">MQTT Username:</label>
-        <input type="text" placeholder="Mosquitto Username" required name="mqtt_user" id="mqtt_user" value="">
-        <label for="mqtt_password">MQTT Password</label>
-        <input type="password" placeholder="Mosquitto Passowrd" required name="mqtt_password" id="mqtt_password" value="" onClick="select()">
-        <label for="mqtt_messageRoot">MQTT Message Root ("msgroot" + "/sensor/data"):</label>
-        <input type="text" placeholder="ws123" required name="mqtt_messageRoot" id="mqtt_messageRoot" value="">
-
-        <label for="sensors">Senzori:</label>
-        <div id="sensors" class="senzori">
-
-        </div><br>
-        <label for="mdns_hostname">mDNS hostname (without .local):</label>
-        <input type="text" placeholder="mdns" required name="mdns_hostname" id="mdns_hostname" value=""><br>
-        <label for="hotspot_ssid">Hotspot SSID:</label>
-        <input type="text" placeholder="ssid" required name="hotspot_ssid" id="hotspot_ssid" value=""><br>
-        <label for="hotspot_pass">Hotspot Password:</label>
-        <input type="password" placeholder="pass" required name="hotspot_pass" id="hotspot_pass" value="" onClick="select()"><br>
-
-        <div id="s">
-          <div class="senzor"> <label for="lowPowerMode_toggle" style="text-align: center">
-              <p>Low Power Mode (toggle / refresh|ON Time)</p>
-              <p>!!!if enabled will be only able to change settings with hotspot active!!!</p>
-            </label><input type="checkbox" placeholder="" required name="lowPowerMode_toggle" id="lowPowerMode_toggle"
-              value=""><br>
-            <input type="number" placeholder="30" required name="refreshTime" id="refreshTime" value=""><br>
-
-          </div>
-        </div><br>
-
-        <input id="SubmitBtn" type="button" value="Submit" onclick="sendData()">
-
+      <label for="wifi_ssid_dropdown">Scan WiFi:</label>
+      <div style="width: 100%; display: flex;" id="dropdowndiv">
+        <input type="button" id="updateDropdownBtn" value="Update" onclick="updateSSIDDropdown()">
+        <select name="wifis" id="wifi_ssid_dropdown">
+          <option value="">Click button to update</option>
+        </select>
       </div>
 
+      <div id="fields1" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+
+      </div>
+      
       <br>
-      <a style="float: left;width: 40%" href="currentConfig">
-        <input id="configBtn" type="button" value="Current config"
-          style="float: left; width: 100%; font-size: x-large;  color: green;">
-      </a>
-      <input id="restartBtn" type="button" value="RestartESP" onclick="restartESP()"
-        style="float: right; width: 40%; font-size: x-large;  color: rebeccapurple;">
 
-    </form>
 
-</body>
-  <script>
+
+      <br>
+
+      <input id="SubmitBtn" type="button" value="Submit" onclick="sendData()">
+
+    </div>
+
+    <br>
+    <input id="refreshBtn" type="button" value="Restore current values" onclick="makeFirstFieldBlock()"
+      style="float: right; width: 40%; font-size: x-large;  color: rgb(153, 109, 51);">
+
+    <a style="float: left;width: 40%" href="currentConfig">
+      <input id="configBtn" type="button" value="Current config"
+        style="float: left; width: 100%; font-size: x-large;  color: green;">
+    </a>
+    <input id="restartBtn" type="button" value="RestartESP" onclick="restartESP()"
+      style="float: right; width: 40%; font-size: x-large;  color: rebeccapurple;">
+
     
 
-    makeSensors();
-    fetchTitles();
-    setInterval(fetchTitles, 1000);
+  </form>
 
-  </script>
+</body>
+<script>
+
+
+  makeFirstFieldBlock();
+</script>
+
 </html>

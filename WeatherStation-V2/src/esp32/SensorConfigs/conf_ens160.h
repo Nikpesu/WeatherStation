@@ -8,7 +8,8 @@ void ens160Reconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(ENS160_task);
+    //taskManager.cancelTask(ENS160_task);
+    //ENS160_running=1;
     myENS = SparkFun_ENS160();
 }
 
@@ -97,7 +98,8 @@ void ens160SetupSend()
 
         if(!lowPowerMode_toggle)
         {
-            ENS160_task = taskManager.scheduleFixedRate(refreshTime,ens160SetupSend,TIME_SECONDS);
+            ////ENS160_task = taskManager.scheduleFixedRate(refreshTime,ens160SetupSend,TIME_SECONDS);
+            //ENS160_running=1;
             runningTasks=1;
         }
         else

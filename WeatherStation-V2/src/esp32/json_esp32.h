@@ -1,16 +1,16 @@
 void loadConfig()
 {
   // Check if JSON exists, if not make a new one
-  if (!LittleFS.exists(JSON_FILE_PATH) || !digitalRead(2))
+  if (!LittleFS.exists(JSON_FILE_PATH) || !digitalRead(RESET_CONFIG_PIN))
   {
-    Serial.println("novi config -- loadConfig");
-    saveNewConfig();
-    Serial.println("novi config napravljen -- loadConfig");
+    Serial.println("["+runningTime()+"] new config making; loadConfig");
+    saveConfig();
+    Serial.println("["+runningTime()+"] new config made; loadConfig");
   }
 
   // Open the JSON file for reading
   File configFile = LittleFS.open(JSON_FILE_PATH, "r");
-  Serial.println("otvoren config -- loadConfig");
+  Serial.println("["+runningTime()+"] config opened; loadConfig");
 
   if (configFile)
   {
@@ -21,53 +21,52 @@ void loadConfig()
     // Parse the JSON object
     DynamicJsonDocument json(JSON_OBJECT_SIZE);
     DeserializationError error = deserializeJson(json, buffer);
-    serializeJson(json, Serial);
+    // serializeJson(json, Serial); Serial.println();
+    
+
     if (!error)
     {
-      // Retrieve the values of the variables from the JSON object
-      wifi_ssid = json["wifi_ssid"].as<String>();
-      wifi_pass = json["wifi_pass"].as<String>();
-      mqtt_server = json["mqtt_server"].as<String>();
-      mqtt_port = json["mqtt_port"];
-      mqtt_user = json["mqtt_user"].as<String>();
-      mqtt_messageRoot = json["mqtt_messageRoot"].as<String>();
-      mdns_hostname = json["mdns_hostname"].as<String>();
-      hotspot_ssid = json["hotspot_ssid"].as<String>();
-      hotspot_pass = json["hotspot_pass"].as<String>();
-      BMP280_toggle = json["BMP280_toggle"];
-      SHT31_toggle = json["SHT31_toggle"];
-      SGP30_toggle = json["SGP30_toggle"];
-      ENS160_toggle = json["ENS160_toggle"];
-      AHT2x_toggle = json["AHT2x_toggle"];
-      SCD4x_toggle = json["SCD4x_toggle"];
-      PMSx003_toggle = json["PMSx003_toggle"];
-      PM1006K_toggle = json["PM1006K_toggle"];
-      SPS30_toggle = json["SPS30_toggle"];
-      lowPowerMode_toggle = json["lowPowerMode_toggle"];
-      refreshTime = json["refreshTime"];
-      mqtt_password = json["mqtt_password"].as<String>();
+      //Sensor toggles
+      for(int i=0; i<SENSOR_COUNT; i++)
+      {//toggleIDName: i0-Sensor_Toggle i1-SensorName
+        *toggles[i]=json[toggleIDName[i][0]];
+      }
+      for(int i=0; i<FIELD_COUNT;i++)
+      {
+        String value = json[fieldsIDNameTypePlaceholder[i][0]].as<String>();
+        String nochange = (String)NO_PASS_CHANGE;
 
+        if (fieldsIDNameTypePlaceholder[i][2] == "password") {
+            if (value != nochange) {
+                *(fields[i]) = value;
+            } else {
+            }
+        } else {
+            *(fields[i]) = value;
+        }
 
+      } 
+      updateFieldsToNative();
     }
-    else
-    {
-      Serial.println("Failed to parse config file1 -- loadConfig");
-    }
+  else
+  {
+    Serial.println("["+runningTime()+"] Failed to parse config file1; loadConfig");
+  }
 
-    Serial.println("f -- loadConfig");
+    Serial.println("["+runningTime()+"] Config loaded; loadConfig");
   }
   else
   {
-    Serial.println("Failed to open config file2  -- loadConfig");
+    Serial.println("["+runningTime()+"] Failed to open config file2; loadConfig");
   }
-  Serial.println("gotovo -- loadConfig");
+  Serial.println("["+runningTime()+"] done; loadConfig");
 }
 // Function to save the configuration to the JSON file
 bool saveConfig()
 {
   // Create a JSON object
   DynamicJsonDocument json(JSON_OBJECT_SIZE);
-  Serial.println("-- started saving to JSON -- saveConfig");
+  Serial.println("["+runningTime()+"] started saving to JSON; saveConfig");
   // Set the values of the variables in the JSON object
   // Serial.println(ESP.getFreeHeap());
 
@@ -93,53 +92,38 @@ bool saveConfig()
   json["PM1006K_toggle"] = PM1006K_toggle;
   json["SPS30_toggle"] = SPS30_toggle;
 
-  serializeJson(json, Serial);
-  Serial.println("   copied to JSON -- saveConfig -- ");
+  //serializeJson(json, Serial); Serial.println();
+  
+  Serial.println("["+runningTime()+"] copied to JSON; saveConfig ");
   // Open the JSON file for writing
   File configFile = LittleFS.open(JSON_FILE_PATH, "w");
 
-  Serial.println("   opened config file -- saveConfig");
+  Serial.println("["+runningTime()+"] opened config file; saveConfig");
   if (configFile)
   {
     // Serialize the JSON object into a buffer
     serializeJson(json, configFile);
     configFile.close();
-    Serial.println("-- copied to JSON -- saveConfig");
+    Serial.println("["+runningTime()+"] copied to JSON; saveConfig");
     return true;
   }
   else
   {
-    Serial.println("Failed to open config file for writing -- saveConfig");
+    Serial.println("["+runningTime()+"] Failed to open config file for writing; saveConfig");
     return false;
   }
 }
 
-void saveNewConfig()
+void updateFieldsToString()
 {
-  saveConfig();
+  mqtt_port_str = String(mqtt_port);
+  lowPowerMode_toggle_str = String(lowPowerMode_toggle);
+  refreshTime_str = String(refreshTime);
 }
 
-void readConfig()
+void updateFieldsToNative()
 {
-  loadConfig();
-
-  Serial.println(wifi_ssid);
-  Serial.println(mqtt_server);
-  Serial.println(mqtt_port);
-  Serial.println(mqtt_user);
-  Serial.println(mqtt_messageRoot);
-  Serial.println(BMP280_toggle);
-  Serial.println(SHT31_toggle);
-  Serial.println(SGP30_toggle);
-  Serial.println(ENS160_toggle);
-  Serial.println(AHT2x_toggle);
-  Serial.println(SCD4x_toggle);
-  Serial.println(PMSx003_toggle);
-  Serial.println(PM1006K_toggle);
-  Serial.println(SPS30_toggle);
-  Serial.println(mdns_hostname);
-  Serial.println(hotspot_ssid);
-  Serial.println(hotspot_pass);
-  Serial.println(lowPowerMode_toggle);
-  Serial.println(refreshTime);
+  mqtt_port=mqtt_port_str.toInt();
+  lowPowerMode_toggle=(lowPowerMode_toggle_str=="true"? true : false);
+  refreshTime = refreshTime_str.toInt();
 }

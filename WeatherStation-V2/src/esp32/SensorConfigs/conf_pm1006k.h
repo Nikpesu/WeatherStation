@@ -8,8 +8,7 @@ void pm1006kReconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(PM1006K_task);
-    Serial1.begin(PM1006K::BAUD_RATE, SERIAL_8N1, PM1006K_RX_PIN, PM1006K_TX_PIN);
+    //taskManager.cancelTask(PM1006K_task);
     pm1006k = new PM1006K(&Serial1);
 }
 
@@ -98,7 +97,7 @@ void pm1006kSetupSend()
         // Handle sensor readings and refresh if not in low power mode
         if (!lowPowerMode_toggle)
         {
-            PM1006K_task = taskManager.scheduleFixedRate(refreshTime, pm1006kSetupSend, TIME_SECONDS);
+            ///PM1006K_task = taskManager.scheduleFixedRate(refreshTime, pm1006kSetupSend, TIME_SECONDS);
             runningTasks=1;
         }
         else

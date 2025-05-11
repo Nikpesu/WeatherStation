@@ -16,21 +16,20 @@ void mqttConnect()
   // Loop until we're reconnected
   while (!client.connected())
   {
-    Serial.println("Attempting MQTT connection...");
+    Serial.println("["+runningTime()+"] Attempting MQTT connection...");
     // Create a random client ID
     String clientId = mdns_hostname+ESP.getEfuseMac();
 
     // Attempt to connect
-    Serial.println(WiFi.status());
+    Serial.println("["+runningTime()+"] WiFi Status: "+WiFi.status());
     if (client.connect(clientId.c_str(), mqtt_user.c_str(), mqtt_password.c_str(), mqtt_messageRoot.c_str(), 1, true, "{\"state\":\"offline\"}"))
     {
       client.publish(mqtt_messageRoot.c_str(), "{\"state\":\"online\"}", true);  // Send initial online message (retained)
-      Serial.println(" SUCCESS!");
+      Serial.println("["+runningTime()+"] SUCCESS!");
     }
     else
     {
-      Serial.print("failed, rc=");
-      Serial.println(client.state());
+      Serial.print("["+runningTime()+"] failed, rc="+client.state());
       break;
     }
   }
@@ -41,17 +40,11 @@ void sendMqtt(String topic, String msg, bool retain)
   if (!client.connected()) mqttConnect();  // Only send if connected
   if (!client.connected())
   {
-    Serial.print("[");
-    Serial.print(runningTime());
-    Serial.print("] Couldnt send: ");
-    Serial.println(topic);
+
+    
+    Serial.print("["+runningTime()+"] Couldnt send: \t"+topic);
     return;
   } 
-  Serial.print("[");
-  Serial.print(runningTime());
-  Serial.print("] Sent topic: ");
-  Serial.println(topic);
-  Serial.println(msg);
 
   // Convert String to char arrays
   const char* topicChar = topic.c_str();
@@ -63,6 +56,27 @@ void sendMqtt(String topic, String msg, bool retain)
   mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
   client.publish(status_topic, "{\"state\":\"online\"}", true);  // Send initial online message (retained)
 
+  Serial.println("["+runningTime()+"] Sent topic: \t"+topic);
+  int pos=0;
+  int msgLen=160;
+  if(msg.length()>msgLen){
+    while(msg.length()>pos)
+    {
+      int len=msgLen;
+      String tmpmsg=msg;
+      if(msg.length()<pos+msgLen)
+      {
+        len=pos-msg.length()-1;
+      }
+      tmpmsg=msg.substring(pos,pos+len);
+      Serial.println("\t\t"+tmpmsg);
+      pos+=msgLen;
+    }
+  }
+  else 
+  {
+    Serial.println("\t\t"+msg);
+  }
   //Serial.println(topic);
   //Serial.println(msg);
 }

@@ -17,7 +17,6 @@
 #else
 #error "This ain't a ESP8266 or ESP32, dumbo!"
 #endif
-
 void setup()
 {
   Serial.begin(115200);

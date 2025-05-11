@@ -8,7 +8,8 @@ void bmp280Reconfigure()
         reconfigure=0;
     }
 
-    taskManager.cancelTask(BMP280_task);
+    ///taskManager.cancelTask(BMP280_task);
+    //BMP280_running=0;
     bmp280 = Adafruit_BMP280();
 }
 
@@ -99,7 +100,8 @@ void bmp280SetupSend()
 
         if(!lowPowerMode_toggle)
         {
-            BMP280_task = taskManager.scheduleFixedRate(refreshTime,bmp280SetupSend,TIME_SECONDS);
+            //BMP280_task = taskManager.scheduleFixedRate(refreshTime,bmp280SetupSend,TIME_SECONDS);
+            //BMP280_running=1;
             runningTasks=1;
         }
         else

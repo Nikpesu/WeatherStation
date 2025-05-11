@@ -6,14 +6,12 @@
 #include <LittleFS.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
-#include <PString.h>
 #include <Streaming.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_SGP30.h>
 #include <Adafruit_SHT31.h>
-#include <TaskManagerIO.h>
 #include <PM1006K.h>
 #include <HardwareSerial.h>
 #include <PubSubClient.h>
@@ -23,12 +21,20 @@
 #include "SparkFun_ENS160.h"
 #include <AHTxx.h> 
 #include <sps30.h>
-#include <SensirionI2cScd4x.h> 
+#include "SparkFun_SCD4x_Arduino_Library.h" 
+#include <PMserial.h> 
+//#include <PString.h>
+//#include <TaskManagerIO.h>
 
 #if __has_include("../secrets.h")
   #include "../secrets.h"
 #else
   #define NO_PASS_CHANGE "__*passwordDidNotChange*__"
+
+  #define HOTSPOT_PIN 3
+  #define RESET_CONFIG_PIN 2
+
+  #define PMS5003_TYPE PMS5003
 
   #define WIFI_SSID ""
   #define WIFI_PASS ""
@@ -41,6 +47,7 @@
   #define HOTSPOT_SSID "Weatherstation"
   #define HOTSPOT_PASS ""
 
+  #define REFRESH_TIME 30
   #define LOWPOWERMODE_TOGGLE false
   #define AHT2X_TOGGLE false
   #define BMP280_TOGGLE false
@@ -57,62 +64,101 @@
 #if defined(SEEED_XIAO_ESP32C3)
   int sda=6;
   int scl=7;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
   #define device "SEEED_XIAO_ESP32C3"
 #elif defined(LOLIN_S2_MINI)
   int sda=33;
   int scl=35;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
   #define device "LOLIN_S2_MINI"
 #elif defined(SEEED_XIAO_ESP32C6)
   int sda=22;
   int scl=23;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
   #define device "SEEED_XIAO_ESP32C6"
 #elif defined(ESP32DOIT_DEVKIT_V1)
   int sda=21;
   int scl=22;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
   #define device "ESP32DOIT-DEVKIT-V1"
 #elif defined(AZ_DELIVERY_DEVKIT_V4)
   int sda=21;
   int scl=22;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
   #define device "AZ-DELIVERY-DEVKIT-V4"
 #elif defined(ESP32)
   int sda=21;
   int scl=22;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
   #define device "GenericESP32"
 #endif
 
 //main
-void rst();
+void startProgram();
+void loopedProgram();
 void sleepAndReset(); 
+void rst();
+String runningTime();
 String runningTime();
 //json.h
-void saveNewConfig();
 void loadConfig();
 bool saveConfig();
-void readConfig();
+void updateFieldsToNative();
+void updateFieldsToString();
 //sensors.h
-//void sendReadingsMqtt(String mqtt_messageRoot, String sensor, String *SensorSuffix,float *sensorVariables);
+void sensorLoop();
 void sensorsBegin();
+void allSetupSend();
+void allReconfigure();
 int getAbsoluteHumidity(float temperature, float humidity);
 //mqtt.h
 void callback(char *topic, byte *payload, unsigned int length);
 void mqttConnect();
 void sendMqtt(String topic, String msg, bool retain);
+void mqttSetup();
 //wifi.h
-void httpDefault();
-void httpHome();
+String IpAddress2String(const IPAddress& ipAddress);
+String rssiToChart(int8_t);
+void apStart();
+void httpConfig();
 void httpData();
+void httpDefault();
+void httpfields();
+void httpHome();
+void httpRestart();
+void httpsensorAndFieldsIDs();
+void httpSensors();
+void httpServicesStart();
+void httpTitles();
+void httpWiFi();
 void wifiStart();
+
 
 // Set the size of the JSON object
 const int JSON_OBJECT_SIZE = 1536;
 
 // Set the path to the JSON file
-const char *JSON_FILE_PATH = "/config1.json";
-
+const char *JSON_FILE_PATH = "/config.json";
 
 // Define the variables
-
-
 String wifi_ssid = WIFI_SSID;
 String wifi_pass = WIFI_PASS;
 String mqtt_server = MQTT_SERVER;
@@ -123,10 +169,14 @@ String mqtt_messageRoot = MQTT_MESSAGEROOT;
 String mdns_hostname = MDNS_HOSTNAME;
 String hotspot_ssid = HOTSPOT_SSID;
 String hotspot_pass = HOTSPOT_PASS;
-
+bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
 int refreshTime=REFRESH_TIME; 
 
-bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
+String mqtt_port_str = String(mqtt_port);
+String lowPowerMode_toggle_str = String(lowPowerMode_toggle);
+String refreshTime_str = String(refreshTime);
+String test = "1"; 
+
 bool AHT2x_toggle = AHT2X_TOGGLE;
 bool BMP280_toggle = BMP280_TOGGLE;
 bool ENS160_toggle = ENS160_TOGGLE;
@@ -137,18 +187,38 @@ bool SGP30_toggle = SGP30_TOGGLE;
 bool SHT31_toggle = SHT31_TOGGLE;
 bool SPS30_toggle = SPS30_TOGGLE;
 
-#define SENSOR_COUNT 9
-bool* toggles[SENSOR_COUNT] = {
-    &AHT2x_toggle,
-    &BMP280_toggle,
-    &ENS160_toggle,
-    &PM1006K_toggle,
-    &PMSx003_toggle,
-    &SCD4x_toggle,
-    &SGP30_toggle,
-    &SHT31_toggle,
-    &SPS30_toggle
+
+#define FIELD_COUNT 12
+String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
+    {"wifi_ssid", "Wifi SSID:", "text", "SSID"},
+    {"wifi_pass", "Wifi Password:", "password", "password"},
+    {"mqtt_server", "MQTT Server:", "text", "server address"},
+    {"mqtt_port", "MQTT Port:", "number", "default: 1883"},
+    {"mqtt_user", "MQTT Username:", "text", "username"},
+    {"mqtt_password", "MQTT Password:", "password", "password"},
+    {"mqtt_messageRoot", "MQTT Message Root (\\\"msgroot\\\" + \\\"/sensor/data\\\"):", "text", "root/topic"},
+    {"mdns_hostname", "mDNS Hostname (without .local):", "text", "device.local"},
+    {"hotspot_ssid", "Hotspot SSID:", "text", "SSID"},
+    {"hotspot_pass", "Hotspot Password:", "password", "password"},
+    {"lowPowerMode_toggle", "Low Power Mode (can only be configured in hotspot mode!!)", "checkbox", ""},
+    {"refreshTime", "Refresh Time:", "number", "default: 30"}
 };
+String* fields[FIELD_COUNT] = {
+    &wifi_ssid,
+    &wifi_pass,
+    &mqtt_server,
+    &mqtt_port_str,
+    &mqtt_user,
+    &mqtt_password,
+    &mqtt_messageRoot,
+    &mdns_hostname,
+    &hotspot_ssid,
+    &hotspot_pass,
+    &lowPowerMode_toggle_str,
+    &refreshTime_str
+};
+
+#define SENSOR_COUNT 9
 String toggleIDName[SENSOR_COUNT][2] = {
     {"AHT2x_toggle", "AHT2x"},
     {"BMP280_toggle", "BMP280"},
@@ -160,26 +230,37 @@ String toggleIDName[SENSOR_COUNT][2] = {
     {"SHT31_toggle", "SHT31"},
     {"SPS30_toggle", "SPS30"}
 };
+bool* toggles[SENSOR_COUNT] = {
+    &AHT2x_toggle,
+    &BMP280_toggle,
+    &ENS160_toggle,
+    &PM1006K_toggle,
+    &PMSx003_toggle,
+    &SCD4x_toggle,
+    &SGP30_toggle,
+    &SHT31_toggle,
+    &SPS30_toggle
+};
 
 bool wifiConnectionType; //0 hotspot, 1 wifi
 bool reconfigure=0;
 bool runningTasks=1;
 bool sensorStart=1;
 
-taskid_t AHT2x_task, BMP280_task, ENS160_task, PM1006K_task, PMSx003_task, SCD4x_task, SGP30_task, SHT31_task, SPS30_task;
+//taskid_t AHT2x_task, BMP280_task, ENS160_task, PM1006K_task, PMSx003_task, SCD4x_task, SGP30_task, SHT31_task, SPS30_task;
 
 float aht2x_temp=nan(""), aht2x_hum=nan("");
 float bmp280_temp=nan(""), bmp280_press=nan(""), bmp280_alt=nan("");
 float ens160_eco2=nan(""), ens160_tvoc=nan(""), ens160_aqi=nan("");
 float pm1006k_pm1_0 = nan(""), pm1006k_pm2_5 = nan(""), pm1006k_pm10_0 = nan("");
-float pmsx003_pm1_0 = nan(""), pmsx003_pm2_5 = nan(""), pmsx003_pm10_0 = nan("");
+float pmsx003_pm1_0 = nan(""), pmsx003_pm2_5 = nan(""), pmsx003_pm10_0 = nan(""), pmsx003_temp = nan(""), pmsx003_hum = nan(""), pmsx003_hcho = nan("");
 float scd4x_co2=nan(""), scd4x_temp=nan(""), scd4x_hum=nan("");
 float sgp30_tvoc=nan(""), sgp30_co2=nan(""), sgp30_eth=nan(""), sgp30_h2=nan("");
 float sht31_temp=nan(""), sht31_hum=nan("");
 float sps30_pm1_0 = nan(""), sps30_pm2_5 = nan(""), sps30_pm10_0 = nan("");
 
 //TODO update sw/hw version
-String SWversion="3.1.0"; //software version
+String SWversion="3.2.0"; //software version
 String HWversion="0.1"; //hardware version
 String Model="Weatherstation";
 String ModelID=device; //ESP32, SEEED_XIAO_ESP32C3... 
@@ -202,11 +283,14 @@ Adafruit_BMP280 bmp280;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SparkFun_ENS160 myENS; 
 AHTxx aht2x(AHTXX_ADDRESS_X38, AHT2x_SENSOR);
-SensirionI2cScd4x scd4x;
+SCD4x scd4x;
+//SPS30 sps30;
 
-#define PM1006K_RX_PIN 8
-#define PM1006K_TX_PIN 9
 PM1006K * pm1006k;
+
+
+PMS pmsx003Type=PMS5003_TYPE;
+SerialPM pmsx003(PMS5003, PMSX003_RX_PIN, PMSX003_TX_PIN); // PMSx003, RX, TX
 
 
 String htmlStart="<!DOCTYPE html> \
