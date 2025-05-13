@@ -11,10 +11,11 @@
 #define MQTT_PORT 1883
 #define MQTT_USER "niko"
 #define MQTT_PASSWORD "Fg9kkryushOCCR9OiAk8"
-#define MQTT_MESSAGEROOT "wstest8"
-#define MDNS_HOSTNAME "wstest8"
-#define HOTSPOT_SSID "wstest8"
+#define MQTT_MESSAGEROOT "WeatherStations/ws1"
+#define MDNS_HOSTNAME "ws1"
+#define HOTSPOT_SSID "ws1"
 #define HOTSPOT_PASS "12345678"
+#define SUGGESTED_AREA  "Vani"
 
 #define REFRESH_TIME 30
 #define LOWPOWERMODE_TOGGLE false

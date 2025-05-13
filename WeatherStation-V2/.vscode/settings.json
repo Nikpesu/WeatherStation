@@ -53,6 +53,10 @@
     "streambuf": "cpp",
     "cinttypes": "cpp",
     "typeinfo": "cpp",
-    "condition_variable": "cpp"
+    "condition_variable": "cpp",
+    "charconv": "cpp",
+    "chrono": "cpp",
+    "format": "cpp",
+    "ratio": "cpp"
   }
 }

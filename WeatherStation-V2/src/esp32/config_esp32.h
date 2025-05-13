@@ -42,10 +42,11 @@
   #define MQTT_PORT 1883
   #define MQTT_USER ""
   #define MQTT_PASSWORD ""
-  #define MQTT_MESSAGEROOT "Weatherstation"
-  #define MDNS_HOSTNAME "Weatherstation"
-  #define HOTSPOT_SSID "Weatherstation"
+  #define MQTT_MESSAGEROOT "WeatherStations/ws1"
+  #define MDNS_HOSTNAME "ws1"
+  #define HOTSPOT_SSID "ws1"
   #define HOTSPOT_PASS ""
+  #define SUGGESTED_AREA  ""
 
   #define REFRESH_TIME 30
   #define LOWPOWERMODE_TOGGLE false
@@ -134,6 +135,7 @@ void callback(char *topic, byte *payload, unsigned int length);
 void mqttConnect();
 void sendMqtt(String topic, String msg, bool retain);
 void mqttSetup();
+String makeMqttSensorTopic(int i, String sensor, String status_topic, String deviceClass[], String SensorSuffix[],  String unitOfMeasurement[]);
 //wifi.h
 String IpAddress2String(const IPAddress& ipAddress);
 String rssiToChart(int8_t);
@@ -171,6 +173,7 @@ String hotspot_ssid = HOTSPOT_SSID;
 String hotspot_pass = HOTSPOT_PASS;
 bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
 int refreshTime=REFRESH_TIME; 
+String suggested_area=SUGGESTED_AREA; 
 
 String mqtt_port_str = String(mqtt_port);
 String lowPowerMode_toggle_str = String(lowPowerMode_toggle);
@@ -188,7 +191,7 @@ bool SHT31_toggle = SHT31_TOGGLE;
 bool SPS30_toggle = SPS30_TOGGLE;
 
 
-#define FIELD_COUNT 12
+#define FIELD_COUNT 13
 String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"wifi_ssid", "Wifi SSID:", "text", "SSID"},
     {"wifi_pass", "Wifi Password:", "password", "password"},
@@ -201,7 +204,8 @@ String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"hotspot_ssid", "Hotspot SSID:", "text", "SSID"},
     {"hotspot_pass", "Hotspot Password:", "password", "password"},
     {"lowPowerMode_toggle", "Low Power Mode (can only be configured in hotspot mode!!)", "checkbox", ""},
-    {"refreshTime", "Refresh Time:", "number", "default: 30"}
+    {"refreshTime", "Refresh Time:", "number", "default: 30"},
+    {"suggested_area", "Suggested area:", "text", "for example: Outside, Inside, Bedroom..."}
 };
 String* fields[FIELD_COUNT] = {
     &wifi_ssid,
@@ -215,7 +219,8 @@ String* fields[FIELD_COUNT] = {
     &hotspot_ssid,
     &hotspot_pass,
     &lowPowerMode_toggle_str,
-    &refreshTime_str
+    &refreshTime_str,
+    &suggested_area
 };
 
 #define SENSOR_COUNT 9
@@ -260,7 +265,7 @@ float sht31_temp=nan(""), sht31_hum=nan("");
 float sps30_pm1_0 = nan(""), sps30_pm2_5 = nan(""), sps30_pm10_0 = nan("");
 
 //TODO update sw/hw version
-String SWversion="3.2.0"; //software version
+String SWversion="3.3.0"; //software version
 String HWversion="0.1"; //hardware version
 String Model="Weatherstation";
 String ModelID=device; //ESP32, SEEED_XIAO_ESP32C3... 
