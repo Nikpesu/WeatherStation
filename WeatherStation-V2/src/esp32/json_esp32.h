@@ -70,28 +70,15 @@ bool saveConfig()
   // Set the values of the variables in the JSON object
   // Serial.println(ESP.getFreeHeap());
 
-  json["wifi_ssid"] = wifi_ssid;
-  json["wifi_pass"] = wifi_pass;
-  json["mqtt_server"] = mqtt_server;
-  json["mqtt_port"] = mqtt_port;
-  json["mqtt_user"] = mqtt_user;
-  json["mqtt_password"] = mqtt_password;
-  json["mqtt_messageRoot"] = mqtt_messageRoot;
-  json["BMP280_toggle"] = BMP280_toggle;
-  json["SHT31_toggle"] = SHT31_toggle;
-  json["SGP30_toggle"] = SGP30_toggle;
-  json["mdns_hostname"] = mdns_hostname;
-  json["hotspot_ssid"] = hotspot_ssid;
-  json["hotspot_pass"] = hotspot_pass;
-  json["refreshTime"] = refreshTime;
-  json["lowPowerMode_toggle"] = lowPowerMode_toggle;
-  json["ENS160_toggle"] = ENS160_toggle;
-  json["AHT2x_toggle"] = AHT2x_toggle;
-  json["SCD4x_toggle"] = SCD4x_toggle;
-  json["PMSx003_toggle"] = PMSx003_toggle;
-  json["PM1006K_toggle"] = PM1006K_toggle;
-  json["SPS30_toggle"] = SPS30_toggle;
-
+  //Sensor toggles
+  for(int i=0; i<SENSOR_COUNT; i++)
+  {//toggleIDName: [i][0]-Sensor_Toggle(sht31_toggle) [i][1]-SensorName(SHT31)
+    json[toggleIDName[i][0]]= *toggles[i];
+  }
+  for(int i=0; i<FIELD_COUNT;i++)
+  {
+    json[fieldsIDNameTypePlaceholder[i][0]]= *(fields[i]);
+  } 
   //serializeJson(json, Serial); Serial.println();
   
   Serial.println("["+runningTime()+"] copied to JSON; saveConfig ");

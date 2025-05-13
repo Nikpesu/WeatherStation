@@ -152,8 +152,8 @@ void httpData()
   DynamicJsonDocument jsonDoc(JSON_OBJECT_SIZE);
   DeserializationError error = deserializeJson(jsonDoc, server.arg(0));
   //serializeJson(jsonDoc, Serial);
-  String oldSSID=wifi_ssid;
   String oldWiFiPass=wifi_pass;
+  String oldWiFiSSID=wifi_ssid;
   if (error)
   {
     Serial.println("["+runningTime()+"] Failed to parse JSON; httpData");
@@ -164,6 +164,15 @@ void httpData()
   else
   {
       
+    if((mdns_hostname!=jsonDoc["mdns_hostname"].as<String>()|| mqtt_messageRoot!=jsonDoc["mqtt_messageRoot"].as<String>() || jsonDoc["wifi_ssid"].as<String>()=="") && wifiConnectionType )
+    {
+      for(int i=0; i<SENSOR_COUNT; i++)
+      { //toggleIDName: i0-Sensor_Toggle i1-SensorName
+        *toggles[i]=0;
+      }
+      
+      sensorsBegin();//remove sensors from hassio
+    }
     //Sensor toggles
     for(int i=0; i<SENSOR_COUNT; i++)
     {//toggleIDName: i0-Sensor_Toggle i1-SensorName
@@ -189,7 +198,6 @@ void httpData()
 
 
     Serial.println("["+runningTime()+"] done pasrsing JSON; httpData\t");
-
     saveConfig();
     jsonDoc.clear();
     loadConfig();
@@ -204,10 +212,12 @@ void httpData()
         rst();
       }
 
-      if(oldSSID!=wifi_ssid || oldWiFiPass!=wifi_pass)
+
+      if(oldWiFiSSID!=wifi_ssid || oldWiFiPass!=wifi_pass || (String)WiFi.getHostname()!=mdns_hostname)
       {
-        server.send(200, "application/json", "{\"message\": \"restarting sensors and connecting to new WiFi!\"}");
-        Serial.println("["+runningTime()+"] restarting sensors and connecting to new WiFi!");
+        server.send(200, "application/json", "{\"message\": \"restarting sensors and connecting to new WiFi! with "+mdns_hostname+".local hostname\",\"new_mdns\":\"http://"+mdns_hostname+".local\"}");
+        Serial.println("["+runningTime()+"] restarting sensors and connecting to new WiFi! With "+mdns_hostname+".local hostname");
+        delay(200);
         wifiStart();
         sensorsBegin();
       }

@@ -80,4 +80,45 @@ void sendMqtt(String topic, String msg, bool retain)
   //Serial.println(topic);
   //Serial.println(msg);
 }
-
+String makeMqttSensorTopic(int i, String sensor, String status_topic, String *deviceClass, String *SensorSuffix,  String *unitOfMeasurement)
+{
+  return  "{"
+          "\"availability\": ["
+            "{"
+            "\"topic\": \""+String(status_topic)+"\","
+            "\"value_template\": \"{{ value_json.state }}\""
+            "}"
+          "],"
+          "\"device\": {"
+            "\"configuration_url\": \"http://"+mdns_hostname+".local\","
+            "\"hw_version\": \""+HWversion+"\","
+            "\"identifiers\": ["
+              "  \"Weatherstation_"+UniqueDeviceID+"\""
+            "],"
+            "\"manufacturer\": \""+Manufacturer+"\","
+            "\"model\": \""+Model+"\","
+            "\"model_id\": \""+ModelID+"\","
+            "\"name\": \""+ mdns_hostname +"\","
+            "\"sw_version\": \""+SWversion+"\","
+            //"\"via_device\": \""+(String)device+"\","
+            "\"suggested_area\": \""+suggested_area+"\""
+          "}"
+          ","
+          "\"device_class\": \"" + (String)*(deviceClass+i) + "\"," // temperature, pressure, humidity, pm1, pm25...   https://www.home-assistant.io/integrations/homeassistant/#device-class
+          "\"enabled_by_default\": true,"
+          "\"object_id\": \""  + sensor + "_" + (String)*(SensorSuffix+i)+ "_" + mdns_hostname  + "\"," // sps30_pm1_0_wstestHostname
+          "\"object_name\": \""  + sensor + "_" + (String)*(SensorSuffix+i)+ "_" + mdns_hostname  + "\"," // sps30_pm1_0_wstestHostname
+          "\"name\": \""  + sensor + " " + (String)*(SensorSuffix+i)+ "\"," // sps30_pm1_0_wstestHostname
+          "\"origin\": {"
+            "\"name\": \"Weatherstation\","
+            "\"sw\": \"" + SWversion + "\"," //1.0
+            "\"url\": \"https://github.com/Nikpesu/WeatherStation\""
+          "}"
+          ","
+          "\"unit_of_measurement\": \""+ (String)*(unitOfMeasurement+i) +"\"," // C*, RH%...
+          "\"unique_id\": \"" + UniqueDeviceID + "_" + sensor + "_" + mdns_hostname + "_" + (String)*(SensorSuffix+i)+  "\"," // xxxxx_sps30_wstestHostname_pm1_0
+          "\"value_template\": \"{{ value_json."+ (String)*(SensorSuffix+i)+" }}\"," // value_json.pm1_0 ...
+          "\"state_topic\": \""+mqtt_messageRoot+"/"+sensor+"\"," // wstest1/sps30
+          "\"state_class\": \"measurement\""
+          "}";
+}

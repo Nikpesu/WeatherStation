@@ -310,7 +310,9 @@
       firstRun=0;
     }
 
-
+  const delay = (delayInms) => {
+    return new Promise(resolve => setTimeout(resolve, delayInms));
+  };
     let isSendingData = false;
     async function sendData() {
       if (isSendingData) return;  // prevent multiple calls
@@ -328,10 +330,6 @@
         button.value = 'Sending...';
 
         // Gather form data
-        const getValue = id => {
-          const el = document.getElementById(id);
-          return el.type === 'checkbox' ? el.checked : el.value;
-        };
 
       const sensorIDresponse = await fetch('/sensorAndFieldsIDs');
       if (!sensorIDresponse.ok) {
@@ -342,10 +340,15 @@
       console.log(sensorIDs);
 
 
-        const data = sensorIDs.reduce((obj, field) => {
-          obj[field] = getValue(field);
-          return obj;
-        }, {});
+      const getValue = id => {
+        const el = document.getElementById(id);
+        return el.type === 'checkbox' ? el.checked : el.value;
+      };
+      
+      const data = sensorIDs.reduce((obj, field) => {
+        obj[field] = getValue(field);
+        return obj;
+      }, {});
 
 
         const response = await fetch('/data', {
@@ -367,9 +370,28 @@
         console.log('Server status:', response.status);
         console.log('Server response:', result);
 
-        // Success
+      if(!(result.new_mdns === undefined))
+      {
+        button.value=result.message+`\nFound new_mdns, redirecting: ${result.new_mdns}`;
+        button.style.backgroundColor = 'cyan';
+      }
+      else 
+      {
         button.value = result.message;
         button.style.backgroundColor = 'green';
+      }
+      while (!(result.new_mdns === undefined)) {
+        let url=result.new_mdns;
+        fetch(url, { method: 'HEAD', mode: 'no-cors' })
+          .then(() => {
+            console.log(`Redirecting to ${url}`);
+            window.location.href = url;
+          })
+          .catch(() => {
+            console.log(`Still waiting for ${url}...`);
+          });      
+          let delayres = await delay(1000);  
+      }
 
       } catch (error) {
         button.style.backgroundColor = 'red';
