@@ -3,6 +3,7 @@
 
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include <LittleFS.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
@@ -15,7 +16,6 @@
 #include <PM1006K.h>
 #include <HardwareSerial.h>
 #include <PubSubClient.h>
-#include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include "SparkFun_ENS160.h"
@@ -62,7 +62,7 @@
 #endif
 
 //device
-#if defined(SEEED_XIAO_ESP32C3)
+#if defined(SEEED_XIAO_ESP32C3) //esp32
   int sda=6;
   int scl=7;
   #define PM1006K_RX_PIN 8
@@ -110,6 +110,22 @@
   #define PMSX003_RX_PIN 13
   #define PMSX003_TX_PIN 14
   #define device "GenericESP32"
+#elif defined(D1_MINI)  //esp8266
+  int sda=4;
+  int scl=5;
+  #define PM1006K_RX_PIN SERIAL_TX_ONLY
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
+  #define device "D1_MINI"
+#elif defined(ESP8266)
+  int sda=4;
+  int scl=5;
+  #define PM1006K_RX_PIN 8
+  #define PM1006K_TX_PIN 9
+  #define PMSX003_RX_PIN 13
+  #define PMSX003_TX_PIN 14
+  #define device "GenericESP32"
 #endif
 
 //main
@@ -126,6 +142,7 @@ void updateFieldsToNative();
 void updateFieldsToString();
 //sensors.h
 void sensorLoop();
+void pm1006kRead();
 void sensorsBegin();
 void allSetupSend();
 void allReconfigure();
@@ -394,3 +411,4 @@ String htmlStart="<!DOCTYPE html> \
   </style>";
 
 #endif
+#
