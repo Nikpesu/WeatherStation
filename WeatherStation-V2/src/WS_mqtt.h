@@ -18,7 +18,7 @@ void mqttConnect()
   {
     Serial.println("["+runningTime()+"] Attempting MQTT connection...");
     // Create a random client ID
-    String clientId = mdns_hostname+ESP.getEfuseMac();
+    String clientId = mdns_hostname+UniqueDeviceID;
 
     // Attempt to connect
     Serial.println("["+runningTime()+"] WiFi Status: "+WiFi.status());

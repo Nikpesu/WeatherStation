@@ -226,6 +226,7 @@
         document.getElementById('title1').textContent = data.title1;
         document.getElementById('title2').textContent = data.title2;
         document.getElementById('title3').textContent = data.title3;
+        document.getElementById('footerText').innerHTML = data.footerText;
       } catch (error) {
         console.error('Error:', error);
       }
@@ -491,7 +492,12 @@
     
 
   </form>
-
+  <footer style="text-align: center;width: 80%; padding: 5px; margin: 3em;">
+    <hr>
+    <div id="footerText">Device loading</div>
+    <p>ESP32/ESP8266 Weatherstation made by <a href="https://github.com/Nikpesu/WeatherStation" target="_blank">Nikolica</a></p>
+    
+  </footer>
 </body>
 <script>
 
