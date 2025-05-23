@@ -24,18 +24,14 @@ void sps30Read()
         int16_t ret;
         struct sps30_measurement m;
         ret=sps30_read_data_ready(&data_ready);
-
-        if(ret)
+        if (ret < 0) 
+            Serial.println("["+runningTime()+"] SPS30 error: "+ret);
+        if(ret==0)
         {
             sps30_read_measurement(&m);
             sps30_pm1_0=m.mc_1p0;
             sps30_pm2_5=m.mc_2p5;
             sps30_pm10_0=m.mc_10p0;
-            sps30_stop_measurement();
-            sensirion_i2c_release();
-
-            sensirion_i2c_init();
-            sps30_start_measurement();
         }
       //  if(sps30.dataAvailable())
       //  {
@@ -44,7 +40,6 @@ void sps30Read()
       //      sps30_pm10_0=sps30.numPM10;
       //  }
 }
-
 void sps30SetupSend()
 {
     String sensor = "SPS30";
@@ -62,11 +57,24 @@ void sps30SetupSend()
     {
         // https://github.com/kevinlutzer/Arduino-sps30/blob/main/examples/sps30test/sps30test.ino
         // sps30.begin();
+        int16_t ret;        
+        
+        sensirion_i2c_init(Wire);
 
-        sensirion_i2c_init();
-        sps30_set_fan_auto_cleaning_interval_days(4); //every 4 days clean
-        //sps30_start_manual_fan_cleaning();
-        sps30_start_measurement();
+        if (sps30_probe() != 0) {
+            Serial.print("SPS sensor probing failed\n");
+        }
+
+        ret = sps30_set_fan_auto_cleaning_interval_days(4);
+        if (ret) {
+            Serial.print("["+runningTime()+"] SPS30 error setting the auto-clean interval: ");
+            Serial.println(ret);
+        }
+
+        ret = sps30_start_measurement();
+        if (ret < 0) {
+            Serial.print("["+runningTime()+"] SPS30 error starting measurement\n");
+        }
 
         
         char status_topic[mqtt_messageRoot.length() + 1];

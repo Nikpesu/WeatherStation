@@ -109,7 +109,6 @@ void httpRestart()
 }
 void httpConfig()
 {
-  
   updateFieldsToString();
   String sendingValue=htmlStart+"<body> <h1>CONFIG:</h1>";
   for(int i=0; i<FIELD_COUNT;i++)
@@ -125,8 +124,47 @@ void httpConfig()
   {
     sendingValue+="<br>"+toggleIDName[i][0]+": "+(String)( (bool)*(toggles[i]) ? "true" : "false" );
   }
+  sendingValue+="<br><br><textarea rows=\"10\" cols=\"45\" readonly>"+infoString+" </textarea> <br>";  
+  sendingValue+="<br><a href=\"/\"><input id=\"subm\" type=\"button\" value=\"Back\"></a><br><br>";
 
-  sendingValue+="<br><br><textarea rows=\"10\" cols=\"45\" readonly>"+infoString+" </textarea> <br><a href=\"http://"+IpAddress2String(WiFi.localIP())+"/\"><input id=\"subm\" type=\"button\" value=\"Back\"></a></body></html>";
+  sendingValue+="<h2>Default config:</h2>";  
+
+  sendingValue += "---------------------------<br>";
+  sendingValue += "#define MDNS_HOSTNAME " + String(MDNS_HOSTNAME) + "<br>";
+  sendingValue += "#define WIFI_SSID " + String(WIFI_SSID) + "<br>";
+  sendingValue += "#define HOTSPOT_SSID " + String(HOTSPOT_SSID) + "<br>";
+  sendingValue += "#define MQTT_SERVER " + String(MQTT_SERVER) + "<br>";
+  sendingValue += "#define MQTT_PORT " + String(MQTT_PORT) + "<br>";
+  sendingValue += "#define MQTT_MESSAGEROOT " + String(MQTT_MESSAGEROOT) + "<br>";
+  sendingValue += "#define SUGGESTED_AREA " + String(SUGGESTED_AREA) + "<br><br>";
+
+  sendingValue += "#define LOOP_TIME " + String(LOOP_TIME) + "<br>";
+  sendingValue += "#define REFRESH_TIME " + String(REFRESH_TIME) + "<br><br>";
+
+  sendingValue += "#define LOWPOWERMODE_TOGGLE " + String(LOWPOWERMODE_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define AHT2X_TOGGLE " + String(AHT2X_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define BMP280_TOGGLE " + String(BMP280_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define ENS160_TOGGLE " + String(ENS160_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define PM1006K_TOGGLE " + String(PM1006K_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define PMSX003_TOGGLE " + String(PMSX003_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define SCD4X_TOGGLE " + String(SCD4X_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define SGP30_TOGGLE " + String(SGP30_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define SHT31_TOGGLE " + String(SHT31_TOGGLE ? "true" : "false") + "<br>";
+  sendingValue += "#define SPS30_TOGGLE " + String(SPS30_TOGGLE ? "true" : "false") + "<br>";
+
+  sendingValue += "---------------------------<br>";
+  sendingValue += "int sda=" + String(sda) + ";<br>";
+  sendingValue += "int scl=" + String(scl) + ";<br>";
+  sendingValue += "#define PM1006K_TX_PIN " + String(PM1006K_TX_PIN) + "<br>";
+  sendingValue += "#define PM1006K_RX_PIN " + String(PM1006K_RX_PIN) + "<br>";
+  sendingValue += "#define PMSX003_RX_PIN " + String(PMSX003_RX_PIN) + "<br>";
+  sendingValue += "#define PMSX003_TX_PIN " + String(PMSX003_TX_PIN) + "<br>";
+  sendingValue += "#define RESET_CONFIG_PIN " + String(RESET_CONFIG_PIN) + "<br>";
+  sendingValue += "#define HOTSPOT_PIN " + String(HOTSPOT_PIN) + "<br>";
+  sendingValue += "---------------------------<br>";
+  sendingValue += "<img src=\""+String(BOARDIMGLINK)+"\" width=\"600px\"><br>";
+
+  sendingValue+="<br><a href=\"/\"><input id=\"subm\" type=\"button\" value=\"Back\"></a></body></html>";
   server.send(200, "text/html", sendingValue);
 }
 void httpDefault()
@@ -213,7 +251,6 @@ void httpData()
         rst();
       }
 
-
       if(oldWiFiSSID!=wifi_ssid || oldWiFiPass!=wifi_pass || (String)WiFi.getHostname()!=mdns_hostname)
       {
         server.send(200, "application/json", "{\"message\": \"restarting sensors and connecting to new WiFi! with "+mdns_hostname+".local hostname\",\"new_mdns\":\"http://"+mdns_hostname+".local\"}");
@@ -255,14 +292,12 @@ void httpServicesStart()
 long  int timeout=0;
 void wifiStart()
 {
+  //wifi start ...
   do{
     timeout=millis()+10000;
-
     WiFi.persistent(false);
     WiFi.disconnect(true);
     WiFi.mode(WIFI_STA);
-    //WiFi.hostname(mdns_hostname);
-    //WiFi.hostname("weatherstation");
     if(!WiFi.status()==WL_CONNECTED) WiFi.disconnect();
     WiFi.begin(wifi_ssid.c_str(), wifi_pass.c_str());
     Serial.print("["+runningTime()+"] WI-FI starting");
@@ -273,58 +308,77 @@ void wifiStart()
     }
     Serial.println(".");
   }while(WiFi.status() != WL_CONNECTED);
-
   Serial.println("\n["+runningTime()+"] WI-FI started!");
 
-  WiFi.setHostname(mdns_hostname.c_str());  
-  if (MDNS.begin(mdns_hostname.c_str()))
+
+  //dns
+  if (!MDNS.begin(mdns_hostname.c_str()))
     Serial.println("["+runningTime()+"] MDNS started!");
   ArduinoOTA.setHostname(mdns_hostname.c_str());
+  WiFi.setHostname(mdns_hostname.c_str());
+  MDNS.addService("_http", "_tcp", 80);
 
-  #if defined(ESP8266)
-    MDNS.addService("http", "tcp", 80);
-  #elif defined(ESP32)
-    mdns_service_add(mdns_hostname.c_str(), "_http", "_tcp", 80, NULL, 0);
-  #endif
-    
+  /*
+  #if defined(ESP32)
+      //mdns_service_add(mdns_hostname.c_str(),"_http","_tcp", 80, NULL,0);
+      Serial.println("["+runningTime()+"] MDNS added port 80!");
+      
+  #elif defined(ESP8266) 
+    else 
+      Serial.println("["+runningTime()+"] MDNS FAILED!");
+    if(!MDNS.addService("_http", "_tcp", 80))
+      Serial.println("["+runningTime()+"] MDNS http service on port 80 started!");
+    else
+      Serial.println("["+runningTime()+"] MDNS http service on port 80 failed!");
+  #endif*/
+
+  //start server services (HTTP)
+  httpServicesStart();
+
+  //ota service start
+  ArduinoOTA.begin();
+
+  //info
   Serial.println("["+runningTime()+"] WI-FI info:");
   Serial.println("\t\tHostname: " + (String)WiFi.getHostname()+".local");
   Serial.println("\t\tIP: "+ WiFi.localIP().toString());
   Serial.println("\t\tRRSI: "+ (String)WiFi.RSSI());
-  httpServicesStart();
-  
-
-  //mdns_service_add(mdns_hostname.c_str(), "_http", "_tcp", 80, NULL, 0);
-  //ArduinoOTA.setMdnsEnabled(false);
-  
-
-
-  ArduinoOTA.begin();
 
 }
 
 void apStart()
 {
+  //hotspot start ...
   Serial.println("["+runningTime()+"] AP starting");
-
   WiFi.persistent(false);
   WiFi.disconnect(true);
   WiFi.softAP(hotspot_ssid.c_str(), hotspot_pass.c_str());
-
   WiFi.begin();
-  
-  Serial.println("["+runningTime()+"] AP started!");
+
+
+  //dns
   if (MDNS.begin(mdns_hostname.c_str()))
-    Serial.println("["+runningTime()+"] MDNS started!");
+  {
+    if(MDNS.addService("http", "tcp", 80))
+      Serial.println("["+runningTime()+"] MDNS http service on port 80 started!");
+    else
+      Serial.println("["+runningTime()+"] MDNS http service on port 80 failed!");
+  }
+  else 
+    Serial.println("["+runningTime()+"] MDNS start FAILED!");
+
+    
+  //info
   Serial.println("["+runningTime()+"] HOTSPOT info:");
   Serial.println("\t\t SSID: "+ (String)WiFi.softAPSSID());
   Serial.println("\t\t IP: "+ (String)WiFi.softAPIP().toString());
 
 
-
+  //start server services (HTTP)
   httpServicesStart();
 
 
+  //DNS server start
   dnsServer.start(53, "*", WiFi.softAPIP());
 
 }

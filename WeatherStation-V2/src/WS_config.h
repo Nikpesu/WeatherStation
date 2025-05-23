@@ -36,27 +36,29 @@
 //#include <PString.h>
 //#include <TaskManagerIO.h>
 
+
+//default config
 #if __has_include("../secrets.h")
   #include "../secrets.h"
 #else
   #define NO_PASS_CHANGE "__*passwordDidNotChange*__"
 
-  #define HOTSPOT_PIN 3
-  #define RESET_CONFIG_PIN 2
-s
-  #define WIFI_SSID ""
   #define WIFI_PASS ""
-  #define MQTT_SERVER ""
-  #define MQTT_PORT 1883
+  #define HOTSPOT_PASS "12345678"
   #define MQTT_USER ""
   #define MQTT_PASSWORD ""
-  #define MQTT_MESSAGEROOT "WeatherStations/ws1"
+
   #define MDNS_HOSTNAME "ws1"
+  #define WIFI_SSID ""
   #define HOTSPOT_SSID "ws1"
-  #define HOTSPOT_PASS ""
+  #define MQTT_SERVER ""
+  #define MQTT_PORT 1883
+  #define MQTT_MESSAGEROOT "WeatherStations/ws1"
   #define SUGGESTED_AREA  ""
 
-  #define REFRESH_TIME 30
+  #define LOOP_TIME 100 //in ms (for looped program)
+  #define REFRESH_TIME 30 //in s (for sensors)
+
   #define LOWPOWERMODE_TOGGLE false
   #define AHT2X_TOGGLE false
   #define BMP280_TOGGLE false
@@ -70,70 +72,100 @@ s
 #endif
 
 //device
+#define device ARDUINO_BOARD
+
 #if defined(SEEED_XIAO_ESP32C3)
-  int sda=6;
-  int scl=7;
-  #define PM1006K_RX_PIN 8
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "SEEED_XIAO_ESP32C3"
+  int sda=D4;
+  int scl=D5;
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define BOARDIMGLINK "https://files.seeedstudio.com/wiki/XIAO_WiFi/pin_map-2.png"
 #elif defined(LOLIN_S2_MINI)
-  int sda=33;
-  int scl=35;
-  #define PM1006K_RX_PIN 8
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "LOLIN_S2_MINI"
+  int sda=4;
+  int scl=5;
+  #define PM1006K_TX_PIN 13
+  #define PM1006K_RX_PIN 14
+  #define PMSX003_RX_PIN 14
+  #define PMSX003_TX_PIN 13
+  #define RESET_CONFIG_PIN 0
+  #define HOTSPOT_PIN 12
+  #define BOARDIMGLINK "https://www.wemos.cc/en/latest/_images/s2_mini_v1.0.0_4_16x9.jpg"
 #elif defined(SEEED_XIAO_ESP32C6)
-  int sda=22;
-  int scl=23;
-  #define PM1006K_RX_PIN 8
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "SEEED_XIAO_ESP32C6"
+  int sda=D4;
+  int scl=D5;
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
+#elif defined(SEEED_XIAO_ESP32S3)
+  int sda=D4;
+  int scl=D5;
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
 #elif defined(ESP32DOIT_DEVKIT_V1)
   int sda=21;
   int scl=22;
-  #define PM1006K_RX_PIN 8
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "ESP32DOIT-DEVKIT-V1"
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2018/08/ESP32-DOIT-DEVKIT-V1-Board-Pinout-36-GPIOs-updated.jpg?resize=750%2C538&quality=100&strip=all&ssl=1"
 #elif defined(AZ_DELIVERY_DEVKIT_V4)
   int sda=21;
   int scl=22;
-  #define PM1006K_RX_PIN 8
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "AZ-DELIVERY-DEVKIT-V4"
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define BOARDIMGLINK "https://media.s-bol.com/x75zGxQXKlZl/Q0XOo6q/550x558.jpg"
 #elif defined(ESP32)
   int sda=21;
   int scl=22;
-  #define PM1006K_RX_PIN 8
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "GenericESP32"
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define BOARDIMGLINK "https://www.upesy.com/cdn/shop/files/doc-esp32-pinout-reference-wroom-devkit.png"
 #elif defined(D1_MINI)  //esp8266
-  int sda=4;
-  int scl=5;
-  #define PM1006K_RX_PIN SERIAL_TX_ONLY
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "D1_MINI"
+  int sda=D2;
+  int scl=D1;
+  #define PM1006K_RX_PIN D5
+  #define PM1006K_TX_PIN D7 //RX / GPIO3 TX / GPIO0
+  #define PMSX003_RX_PIN D5
+  #define PMSX003_TX_PIN D7
+  #define RESET_CONFIG_PIN D3
+  #define HOTSPOT_PIN D6
+  #define FAN_PIN D4
+  #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2019/05/ESP8266-WeMos-D1-Mini-pinout-gpio-pin.png?resize=715%2C362&quality=100&strip=all&ssl=1"
 #elif defined(ESP8266)
   int sda=4;
   int scl=5;
   #define PM1006K_RX_PIN SERIAL_TX_ONLY
-  #define PM1006K_TX_PIN 9
-  #define PMSX003_RX_PIN 13
-  #define PMSX003_TX_PIN 14
-  #define device "GenericESP32"
+  #define PM1006K_TX_PIN D8
+  #define PMSX003_RX_PIN D5
+  #define PMSX003_TX_PIN D7
+  #define RESET_CONFIG_PIN D3
+  #define HOTSPOT_PIN D6
+  #define FAN_PIN D4
+  #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2019/05/ESP8266-NodeMCU-kit-12-E-pinout-gpio-pin.png?resize=817%2C542&quality=100&strip=all&ssl=1"
 #endif
 
 //main
@@ -302,6 +334,7 @@ String Manufacturer="@Nikpesu";
 #endif
 String infoString="log available after about 10s";
 
+
 // Define the JSON document size
 // StaticJsonDocument<1024> doc;
 DynamicJsonDocument doc(JSON_OBJECT_SIZE);
@@ -317,7 +350,6 @@ DNSServer dnsServer;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-
 Adafruit_SGP30 sgp30;
 Adafruit_BMP280 bmp280;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
@@ -326,6 +358,9 @@ AHTxx aht2x(AHTXX_ADDRESS_X38, AHT2x_SENSOR);
 SCD4x scd4x;
 //SPS30 sps30;
 
+#if defined(ESP8266)
+  SoftwareSerial pm1006Serial(PM1006K_TX_PIN, PM1006K_RX_PIN); 
+#endif 
 PM1006K * pm1006k;
 
 

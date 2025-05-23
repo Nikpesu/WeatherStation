@@ -8,8 +8,12 @@ void pm1006kReconfigure()
         reconfigure=0;
     }
 
+    #if defined(ESP8266)
+        pm1006k = new PM1006K(&pm1006Serial);
+    #elif defined(ESP32)
+        pm1006k = new PM1006K(&Serial1);
+    #endif
     //taskManager.cancelTask(PM1006K_task);
-    pm1006k = new PM1006K(&Serial1);
 }
 
 
@@ -42,13 +46,14 @@ void pm1006kSetupSend()
     {
         // https://github.com/kevinlutzer/Arduino-PM1006K/blob/main/examples/pm1006ktest/pm1006ktest.ino
         #if defined(ESP8266)
-            Serial1.begin(PM1006K::BAUD_RATE, SERIAL_8N1, SERIAL_TX_ONLY, (int)PM1006K_TX_PIN);
+            pm1006Serial.begin(PM1006K::BAUD_RATE);
+            pm1006k = new PM1006K(&pm1006Serial);
         #elif defined(ESP32)
-            Serial1.begin(PM1006K::BAUD_RATE, SERIAL_8N1, PM1006K_RX_PIN, (int)PM1006K_TX_PIN);
+            Serial1.begin(PM1006K::BAUD_RATE, SERIAL_8N1, (int)PM1006K_RX_PIN, (int)PM1006K_TX_PIN);
+            pm1006k = new PM1006K(&Serial1); 
         #endif
         
 
-        pm1006k = new PM1006K(&Serial1);
 
 
         char status_topic[mqtt_messageRoot.length() + 1];

@@ -15,7 +15,6 @@ void sht31Reconfigure()
 
 void sht31Read()
 {
-    
   sht31_temp = sht31.readTemperature();
   sht31_hum = sht31.readHumidity();
     
