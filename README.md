@@ -1,39 +1,61 @@
+# WeatherStation, ESP32/ESP8266 MQTT Integration for Home Assistant
 
-## Setup
+This project is designed for **ESP32** and **ESP8266** microcontrollers. It uses **MQTT** to send data to **Home Assistant** via the MQTT integration.
 
-1) Install <a href="https://code.visualstudio.com/">Visual Studio Code</a> 
+### Requirements
 
-2) Install <a href="https://platformio.org/install/ide?install=vscode">PlatformIO<a/> extension from <a href="https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide">Extensions</a> (CTRL + SHIFT + X)
+* An MQTT broker/server (e.g. Mosquitto)
+* A running Home Assistant instance with MQTT integration configured
+* Both your device and Home Assistant must connect to the **same MQTT server**
+* The MQTT discovery prefix in Home Assistant must be set to `homeassistant` (this is the default)
 
-3) Open project with Platform IO.
-![image](https://user-images.githubusercontent.com/92652074/227805914-9f61558e-7341-4283-bba1-01baa1d0d283.png)
+---
 
-4) Then select board
-![image](https://user-images.githubusercontent.com/92652074/227806081-7891bc30-c31b-41e3-9e3c-0b7a8aa0ceae.png)
+## 🚀 Setup Instructions
 
-5) Then set parameters (in ```esp32/main_esp32.h or esp8266/main_esp8266.h```): ```SDA``` and ```SCL``` port (```default => ESP8266  4, 5 or ESP32 33, 35```) and ```pin``` for button (```default => 12```)
-![image](https://user-images.githubusercontent.com/92652074/227806317-3180fef1-5d0f-4acd-a1d8-52aff0d38488.png)
+### 1. Install Required Tools
 
-6) Compile and upload.
-![image](https://user-images.githubusercontent.com/92652074/227806434-7f347533-40c4-4e5e-92a7-02da082f8ce5.png)
+* Download and install [Visual Studio Code](https://code.visualstudio.com/)
+* Install the [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode) from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide)
 
-7) Upload data.
-![image](https://user-images.githubusercontent.com/92652074/227806562-6ec9c297-f2da-4a4b-8441-a30f86b7e0bb.png)
+### 2. Open the Project in PlatformIO
 
-8) Hold the button (```pin 9``` default) and press restart for hotspot to open (default ip should be ```192.168.4.1``` or just ```see serial for ip/hostname```)
+![Open Project](https://user-images.githubusercontent.com/92652074/227805914-9f61558e-7341-4283-bba1-01baa1d0d283.png)
 
-9) Input data to ESP and restart ESP if it doesn't by itself
-![image](https://user-images.githubusercontent.com/92652074/227806872-59262a0b-603e-4a0c-8dac-6966c2ac84b8.png)
+### 3. Select Your Board
 
-10) Enjoy 🥰
+Choose the appropriate board for your microcontroller:
 
-  
-## OTA update
+![Select Board](https://user-images.githubusercontent.com/92652074/227806081-7891bc30-c31b-41e3-9e3c-0b7a8aa0ceae.png)
 
-1) set in platformio.ini file for selected board ```upload_port``` (example```upload_port=ws1.local```)
+### 4. Configure Settings (Optional)
 
-2) upload... (if it doesn't do it first time try again)
+Customize parameters using either `secrets.h` or `config.h`.
 
-## Board scheme v1
+### 5. Upload the Firmware
 
-![Schematic_weather V2_2022-08-01](https://user-images.githubusercontent.com/92652074/182050715-7694a899-4b08-4b32-82c2-49ca656223d8.png)
+Click the upload button:
+
+![Upload Sketch](https://github.com/user-attachments/assets/c09eb2cc-f087-4720-b816-2e035ae29a85)
+
+### 6. Upload Data Files
+
+Upload the SPIFFS or LittleFS data:
+
+![Upload Data](https://github.com/user-attachments/assets/0d0c9a81-bb19-4a51-bebc-14dab6b0c8b8)
+
+### 7. Connect to Wi-Fi (If Not Preconfigured)
+
+If Wi-Fi credentials were not set beforehand, connect to the device’s hotspot:
+
+* **SSID:** `ws1`
+* **Password:** `12345678`
+
+### 8. Done! 🎉
+
+Once connected and configured, your device should automatically appear in **Home Assistant** via MQTT Discovery.
+You can find your instance on MDNS_hostname.local (default is `ws1.local`) 
+
+---
+
+
