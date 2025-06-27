@@ -1,4 +1,4 @@
-# WeatherStation, ESP32/ESP8266 MQTT Integration for Home Assistant
+# ESP32/ESP8266 MQTT WeatherStation for Home Assistant
 
 This project is designed for **ESP32** and **ESP8266** microcontrollers. It uses **MQTT** to send data to **Home Assistant** via the MQTT integration.
 
