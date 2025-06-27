@@ -46,10 +46,15 @@ Upload the SPIFFS or LittleFS data:
 
 ### 7. Connect to Wi-Fi (If Not Preconfigured)
 
-If Wi-Fi credentials were not set beforehand, connect to the device’s hotspot:
+If you haven't set the Wi-Fi credentials in advance, the device will start in Access Point (AP) mode. To configure it:
 
-* **SSID:** `ws1`
-* **Password:** `12345678`
+1. Connect to the device's hotspot:
+
+   * **SSID:** `ws1`
+   * **Password:** `12345678`
+
+2. After connecting, you should be automatically redirected to the configuration homepage.
+   If not, open a browser and navigate to: `http://192.168.4.1`
 
 ### 8. Done! 🎉
 
@@ -58,4 +63,25 @@ You can find your instance on MDNS_hostname.local (default is `ws1.local`)
 
 ---
 
+## 📄 License
 
+This project is licensed under the **GNU General Public License v3.0**.
+
+You are free to:
+
+* **Use** this software for any purpose
+* **Distribute** it freely
+* **Modify** the source code
+* **Share** your modified versions
+
+Under the following conditions:
+
+* **Attribution**: You must give appropriate credit to the original author.
+* **Share Alike**: Any modifications must also be released under the **same GPL v3 license**.
+* **License Notice**: You must include a copy of the license in any distribution.
+
+Read the full license text here: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
+
+©Nikpesu, 2025
+
+---
