@@ -2,12 +2,29 @@
 
 This project is designed for **ESP32** and **ESP8266** microcontrollers. It uses **MQTT** to send data to **Home Assistant** via the MQTT integration.
 
+## 📚 Table of Contents
+
+- [Overview](#esp32esp8266-mqtt-weatherstation-for-home-assistant)
+- [✅ Supported Boards](#-supported-boards)
+- [🚀 Setup Instructions](#-setup-instructions)
+  - [1. Install Required Tools](#1-install-required-tools)
+  - [2. Open the Project in PlatformIO](#2-open-the-project-in-platformio)
+  - [3. Select Your Board](#3-select-your-board)
+  - [4. Configure Settings (Optional)](#4-configure-settings-optional)
+  - [5. Upload the Firmware](#5-upload-the-firmware)
+  - [6. Upload Data Files](#6-upload-data-files)
+  - [7. Connect to Wi-Fi (If Not Preconfigured)](#7-connect-to-wi-fi-if-not-preconfigured)
+  - [8. Done! 🎉](#8-done-)
+- [📄 License](#-license)
+
+---
+
 ### Requirements
 
-* An MQTT broker/server (e.g. Mosquitto)
-* A running Home Assistant instance with MQTT integration configured
-* Both your device and Home Assistant must connect to the **same MQTT server**
-* The MQTT discovery prefix in Home Assistant must be set to `homeassistant` (this is the default)
+- An MQTT broker/server (e.g. Mosquitto)
+- A running Home Assistant instance with MQTT integration configured
+- Both your device and Home Assistant must connect to the **same MQTT server**
+- The MQTT discovery prefix in Home Assistant must be set to `homeassistant` (this is the default)
 
 ---
 
@@ -17,19 +34,20 @@ This release is compatible with the following boards via **PlatformIO**:
 
 ### **ESP32 Boards**
 
-* AZ-Delivery Devkit V4
-* ESP32 DOIT Devkit V1
-* Lolin S2 Mini
-* Seeed XIAO ESP32-C3
-* Seeed XIAO ESP32-C6
-* Seeed XIAO ESP32-S3
+- AZ-Delivery Devkit V4
+- ESP32 DOIT Devkit V1
+- Lolin S2 Mini
+- Seeed XIAO ESP32-C3
+- Seeed XIAO ESP32-C6
+- Seeed XIAO ESP32-S3
 
 ### **ESP8266 Boards**
 
-* Wemos D1 Mini
+- Wemos D1 Mini
 
 ### **Any ESP8266/ESP32 board**
-* Just need to make custom board in `platformio.ini`
+
+- Just need to make custom board in `platformio.ini`
 
 Each board has both **USB upload** and **OTA update** environments available in the PlatformIO configuration.
 
@@ -39,8 +57,8 @@ Each board has both **USB upload** and **OTA update** environments available in 
 
 ### 1. Install Required Tools
 
-* Download and install [Visual Studio Code](https://code.visualstudio.com/)
-* Install the [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode) from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide)
+- Download and install [Visual Studio Code](https://code.visualstudio.com/)
+- Install the [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode) from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide)
 
 ### 2. Open the Project in PlatformIO
 
@@ -73,17 +91,16 @@ Upload the SPIFFS or LittleFS data:
 If you haven't set the Wi-Fi credentials in advance, the device will start in Access Point (AP) mode. To configure it:
 
 1. Connect to the device's hotspot:
-
-   * **SSID:** `ws1`
-   * **Password:** `12345678`
+   - **SSID:** `ws1`
+   - **Password:** `12345678`
 
 2. After connecting, you should be automatically redirected to the configuration homepage.
    If not, open a browser and navigate to: `http://192.168.4.1`
 
 ### 8. Done! 🎉
 
-Once connected and configured, your device should automatically appear in **Home Assistant** via MQTT Discovery.
-You can find your instance on MDNS_hostname.local (default is `ws1.local`) 
+Once connected and configured, your device should automatically appear in **Home Assistant** via MQTT Discovery.  
+You can find your instance on `MDNS_hostname.local` (default is `ws1.local`).
 
 ---
 
@@ -93,17 +110,17 @@ This project is licensed under the **GNU General Public License v3.0**.
 
 You are free to:
 
-* **Use** this software for any purpose
-* **Distribute** it freely
-* **Modify** the source code
-* **Share** your modified versions
+- **Use** this software for any purpose
+- **Distribute** it freely
+- **Modify** the source code
+- **Share** your modified versions
 
 Under the following conditions:
 
-* **Attribution**: You must give appropriate credit to the original author.
-* **Share Alike**: Any modifications must also be released under the **same GPL v3 license**.
-* **License Notice**: You must include a copy of the license in any distribution.
+- **Attribution**: You must give appropriate credit to the original author.
+- **Share Alike**: Any modifications must also be released under the **same GPL v3 license**.
+- **License Notice**: You must include a copy of the license in any distribution.
 
 Read the full license text here: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 
-©Nikpesu, 2025
+© Nikpesu, 2025
