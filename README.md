@@ -28,6 +28,9 @@ This release is compatible with the following boards via **PlatformIO**:
 
 * Wemos D1 Mini
 
+### **Any ESP8266/ESP32 board**
+* Just need to make custom board in `platformio.ini`
+
 Each board has both **USB upload** and **OTA update** environments available in the PlatformIO configuration.
 
 ---
