@@ -11,6 +11,27 @@ This project is designed for **ESP32** and **ESP8266** microcontrollers. It uses
 
 ---
 
+## ✅ Supported Boards
+
+This release is compatible with the following boards via **PlatformIO**:
+
+### **ESP32 Boards**
+
+* AZ-Delivery Devkit V4
+* ESP32 DOIT Devkit V1
+* Lolin S2 Mini
+* Seeed XIAO ESP32-C3
+* Seeed XIAO ESP32-C6
+* Seeed XIAO ESP32-S3
+
+### **ESP8266 Boards**
+
+* Wemos D1 Mini
+
+Each board has both **USB upload** and **OTA update** environments available in the PlatformIO configuration.
+
+---
+
 ## 🚀 Setup Instructions
 
 ### 1. Install Required Tools
