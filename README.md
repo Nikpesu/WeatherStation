@@ -83,5 +83,3 @@ Under the following conditions:
 Read the full license text here: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
 
 ©Nikpesu, 2025
-
----
