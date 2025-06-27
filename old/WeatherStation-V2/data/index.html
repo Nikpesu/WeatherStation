@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Weatherstation</title>
+  <meta name="viewport" content="initial-scale=1.0">
+  <style>
+    form {
+      width: 75%;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: large;
+      font-weight: bold;
+    }
+
+    #myForm>div {
+
+      display: flex;
+      justify-content: center;
+      align-content: center;
+      flex-direction: column;
+      width: auto;
+      align-content: center;
+    }
+
+    body {
+      background-color: rgba(196, 196, 196, 0.411);
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-content: center;
+      flex-direction: column;
+      width: auto;
+      align-content: center;
+      flex-wrap: wrap;
+    }
+
+    .senzori {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      width: 100%;
+      flex-direction: row;
+
+    }
+
+    .senzor {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      align-self: center;
+      margin-top: 1em;
+    }
+
+    input {
+      height: 1.7em;
+      font-size: 1.6em;
+      background-color: gainsboro;
+      border-radius: 0.3em;
+      border: gray 1px solid;
+      transition: 0.2s;
+      color: rgb(0, 31, 78);
+    }
+
+    input[type="button"] {
+      height: 3em;
+      margin-top: 1em;
+
+    }
+    input:hover {
+      border-color: rgb(82, 82, 82);
+      background-color: rgb(175, 175, 175);
+      transition: 0.2s;
+    }
+    
+    input[type="button"]:active {
+      border-color: rgb(80, 78, 78);
+      background-color: rgb(100, 112, 117);
+      color: white;
+
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 1;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+  </style>
+  <script defer>
+    function sendData() {
+      // Get form values
+      const wifi_ssid = document.getElementById("wifi_ssid").value;
+      const wifi_pass = document.getElementById("wifi_pass").value;
+      const mqtt_server = document.getElementById("mqtt_server").value;
+      const mqtt_port = document.getElementById("mqtt_port").value;
+      const mqtt_user = document.getElementById("mqtt_user").value;
+      const mqtt_password = document.getElementById("mqtt_password").value;
+      const mqtt_messageRoot = document.getElementById("mqtt_messageRoot").value;
+      const BMP280_toggle = document.getElementById("BMP280_toggle").checked;
+      const SHT31_toggle = document.getElementById("SHT31_toggle").checked;
+      const SGP30_toggle = document.getElementById("SGP30_toggle").checked;
+      const mdns_hostname = document.getElementById("mdns_hostname").value;
+      const hotspot_ssid = document.getElementById("hotspot_ssid").value;
+      const hotspot_pass = document.getElementById("hotspot_pass").value;
+      const lowPowerMode_toggle = document.getElementById("lowPowerMode_toggle").checked;
+      const refreshTime = document.getElementById("refreshTime").value;
+      const AHT2x_toggle = document.getElementById("AHT2x_toggle").checked;
+      const ENS160_toggle = document.getElementById("ENS160_toggle").checked;
+
+      // Create data object
+      const data = {
+        wifi_ssid,
+        wifi_pass,
+        mqtt_server,
+        mqtt_port,
+        mqtt_user,
+        mqtt_password,
+        mqtt_messageRoot,
+        BMP280_toggle,
+        SHT31_toggle,
+        SGP30_toggle,
+        AHT2x_toggle,
+        ENS160_toggle,
+        mdns_hostname,
+        hotspot_ssid,
+        hotspot_pass,
+        lowPowerMode_toggle,
+        refreshTime
+      };
+
+      // Send data using fetch API
+      fetch('/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+        .then(response => {
+          console.log('Data sent:', data);
+          // Reset form after data is sent
+          //document.getElementById("myForm").reset();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+  </script>
+</head>
+
+<body>
+
+  <h1 style="align-self: center;">Weatherstation</h1>
+
+  <form id="myForm" onsubmit="return false;">
+    <div>
+      <label for="wifi_ssid">WiFi SSID:</label>
+      <input type="text" id="wifi_ssid" name="wifi_ssid" required placeholder="SSID"><br>
+
+      <label for="wifi_pass">WiFi Password:</label>
+      <input type="password" id="wifi_pass" name="wifi_pass" required placeholder="PASS"><br>
+
+      <label for="mqtt_server">MQTT Server:</label>
+      <input type="text" id="mqtt_server" name="mqtt_server" required placeholder="Mosquitto IP"><br>
+
+      <label for="mqtt_port">MQTT Port:</label>
+      <input type="number" id="mqtt_port" name="mqtt_port" required value="1883"><br>
+
+      <label for="mqtt_user">MQTT Username:</label>
+      <input type="text" id="mqtt_user" name="mqtt_user" required placeholder="Mosquitto Username"><br>
+
+      <label for="mqtt_password">MQTT Password:</label>
+      <input type="password" id="mqtt_password" name="mqtt_password" required placeholder="Mosquitto Passowrd"><br>
+
+      <label for="mqtt_messageRoot">MQTT Message Root ("msgroot" + "/sensor/data"):</label>
+      <input type="text" id="mqtt_messageRoot" name="mqtt_messageRoot" required placeholder="/ws123"><br>
+
+      <label for="sens">Senzori:</label>
+      <div id="sens" class="senzori">
+        <div class="senzor">
+          <label for="BMP280_toggle">BMP280</label>
+          <input type="checkbox" id="BMP280_toggle" name="BMP280_toggle"><br>
+        </div>
+
+        <div class="senzor">
+          <label for="SHT31_toggle">SHT31</label>
+          <input type="checkbox" id="SHT31_toggle" name="SHT31_toggle"><br>
+        </div>
+
+        <div class="senzor">
+          <label for="SGP30_toggle">SGP30</label>
+          <input type="checkbox" id="SGP30_toggle" name="SGP30_toggle"><br>
+        </div>
+        <div class="senzor">
+          <label for="AHT2x_toggle">AHT2x</label>
+          <input type="checkbox" id="AHT2x_toggle" name="AHT2x_toggle"><br>
+        </div>
+        <div class="senzor">
+          <label for="ENS160_toggle">ENS160</label>
+          <input type="checkbox" id="ENS160_toggle" name="ENS160_toggle"><br>
+        </div>
+
+
+      </div><br>
+
+      <label for="mdns_hostname">mDNS hostname (without .local):</label>
+      <input type="text" id="mdns_hostname" name="mdns_hostname" required value="wsnew"><br>
+
+      <label for="hotspot_ssid">Hotspot SSID:</label>
+      <input type="text" id="hotspot_ssid" name="hotspot_ssid" required value="ws"><br>
+
+      <label for="hotspot_pass">Hotspot Password:</label>
+      <input type="password" id="hotspot_pass" name="hotspot_pass" required value=""><br>
+
+      <div id="s">
+        <div class="senzor">
+          <label for="lowPowerMode_toggle">Low Power Mode (toggle / refresh|ON Time)</label>
+          <input type="checkbox" id="lowPowerMode_toggle" name="lowPowerMode_toggle"><br>
+          <input type="number" id="refreshTime" name="refreshTime" required value="30"><br>
+        </div>
+      </div><br>
+
+      <input id="subm" type="button" value="Submit" onclick="sendData()" >
+
+    </div>
+  </form>
+</body>
+
+</html>
