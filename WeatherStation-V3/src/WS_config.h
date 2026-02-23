@@ -75,8 +75,8 @@
 #define device ARDUINO_BOARD
 
 #if defined(SEEED_XIAO_ESP32C3)
-  int sda=D4;
-  int scl=D5;
+  #define SDA_PIN D4
+  #define SDA_PIN D5
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
@@ -85,8 +85,8 @@
   #define HOTSPOT_PIN D1
   #define BOARDIMGLINK "https://files.seeedstudio.com/wiki/XIAO_WiFi/pin_map-2.png"
 #elif defined(LOLIN_S2_MINI)
-  int sda=4;
-  int scl=5;
+  #define SDA_PIN 4
+  #define SDA_PIN 5
   #define PM1006K_TX_PIN 13
   #define PM1006K_RX_PIN 14
   #define PMSX003_RX_PIN 14
@@ -95,8 +95,8 @@
   #define HOTSPOT_PIN 12
   #define BOARDIMGLINK "https://www.wemos.cc/en/latest/_images/s2_mini_v1.0.0_4_16x9.jpg"
 #elif defined(SEEED_XIAO_ESP32C6)
-  int sda=D4;
-  int scl=D5;
+  #define SDA_PIN D4
+  #define SDA_PIN D5
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
@@ -105,8 +105,8 @@
   #define HOTSPOT_PIN D1
   #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
 #elif defined(SEEED_XIAO_ESP32S3)
-  int sda=D4;
-  int scl=D5;
+  #define SDA_PIN D4
+  #define SDA_PIN D5
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
@@ -115,8 +115,8 @@
   #define HOTSPOT_PIN D1
   #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
 #elif defined(ESP32DOIT_DEVKIT_V1)
-  int sda=21;
-  int scl=22;
+  #define SDA_PIN 21
+  #define SDA_PIN 22
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
@@ -125,8 +125,8 @@
   #define HOTSPOT_PIN D1
   #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2018/08/ESP32-DOIT-DEVKIT-V1-Board-Pinout-36-GPIOs-updated.jpg?resize=750%2C538&quality=100&strip=all&ssl=1"
 #elif defined(AZ_DELIVERY_DEVKIT_V4)
-  int sda=21;
-  int scl=22;
+  #define SDA_PIN 21
+  #define SDA_PIN 22
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
@@ -135,8 +135,8 @@
   #define HOTSPOT_PIN D1
   #define BOARDIMGLINK "https://media.s-bol.com/x75zGxQXKlZl/Q0XOo6q/550x558.jpg"
 #elif defined(ESP32)
-  int sda=21;
-  int scl=22;
+  #define SDA_PIN 21
+  #define SDA_PIN 22
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
@@ -145,8 +145,8 @@
   #define HOTSPOT_PIN D1
   #define BOARDIMGLINK "https://www.upesy.com/cdn/shop/files/doc-esp32-pinout-reference-wroom-devkit.png"
 #elif defined(D1_MINI)  //esp8266
-  int sda=D2;
-  int scl=D1;
+  #define SDA_PIN D2
+  #define SCL_PIN D1
   #define PM1006K_RX_PIN D5
   #define PM1006K_TX_PIN D7 //RX / GPIO3 TX / GPIO0
   #define PMSX003_RX_PIN D5
@@ -156,8 +156,8 @@
   #define FAN_PIN D4
   #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2019/05/ESP8266-WeMos-D1-Mini-pinout-gpio-pin.png?resize=715%2C362&quality=100&strip=all&ssl=1"
 #elif defined(ESP8266)
-  int sda=4;
-  int scl=5;
+  #define SDA_PIN 4
+  #define SDA_PIN 5
   #define PM1006K_RX_PIN SERIAL_TX_ONLY
   #define PM1006K_TX_PIN D8
   #define PMSX003_RX_PIN D5
@@ -202,7 +202,7 @@ void httpDefault();
 void httpfields();
 void httpHome();
 void httpRestart();
-void httpsensorAndFieldsIDs();
+void httpIDs();
 void httpSensors();
 void httpServicesStart();
 void httpTitles();
@@ -246,7 +246,6 @@ bool SCD4x_toggle = SCD4X_TOGGLE;
 bool SGP30_toggle = SGP30_TOGGLE;
 bool SHT31_toggle = SHT31_TOGGLE;
 bool SPS30_toggle = SPS30_TOGGLE;
-
 
 #define FIELD_COUNT 13
 String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
@@ -304,6 +303,45 @@ bool* toggles[SENSOR_COUNT] = {
     &SPS30_toggle
 };
 
+int sda_pin=SDA_PIN;
+int scl_pin=SCL_PIN;
+int PM1006K_RX_pin=PM1006K_RX_PIN;
+int PM1006K_TX_pin=PM1006K_TX_PIN;//RX / GPIO3 TX / GPIO0
+int PMSX003_RX_pin=PMSX003_RX_PIN;
+int PMSX003_TX_pin=PMSX003_TX_PIN;
+int RESET_CONFIG_pin=RESET_CONFIG_PIN;
+int HOTSPOT_pin=HOTSPOT_PIN;
+int FAN_pin=FAN_PIN;
+
+#define PINS_COUNT 9
+String pinIDName[PINS_COUNT][2] = {
+    {"sda_pin", "SDA"},
+    {"scl_pin", "SCL"},
+    {"PM1006K_RX_pin", "PM1006K RX"},
+    {"PM1006K_TX_pin", "PM1006K TX"},
+    {"PMSX003_RX_pin", "PMSX003 RX"},
+    {"PMSX003_TX_pin", "PMSX003 TX"},
+    {"RESET_CONFIG_pin", "RESET CONFIG"},
+    {"HOTSPOT_pin", "HOTSPOT"},
+    {"FAN_pin", "FAN"}
+};
+int* pins[PINS_COUNT] = {
+    &sda_pin,
+    &scl_pin,
+    &PM1006K_RX_pin,
+    &PM1006K_TX_pin,
+    &PMSX003_RX_pin,
+    &PMSX003_TX_pin,
+    &RESET_CONFIG_pin,
+    &HOTSPOT_pin,
+    &FAN_pin
+};
+
+
+
+
+
+
 bool wifiConnectionType; //0 hotspot, 1 wifi
 bool reconfigure=0;
 bool runningTasks=1;
@@ -359,13 +397,13 @@ SCD4x scd4x;
 //SPS30 sps30;
 
 #if defined(ESP8266)
-  SoftwareSerial pm1006Serial(PM1006K_TX_PIN, PM1006K_RX_PIN); 
+  SoftwareSerial pm1006Serial(PM1006K_TX_pin, PM1006K_RX_pin); 
 #endif 
 PM1006K * pm1006k;
 
 
 PMS pmsx003Type=PMS5003;
-SerialPM pmsx003(pmsx003Type, PMSX003_RX_PIN, PMSX003_TX_PIN); // PMSx003, RX, TX
+SerialPM pmsx003(pmsx003Type, PMSX003_RX_pin, PMSX003_TX_pin); // PMSx003, RX, TX
 
 
 String htmlStart="<!DOCTYPE html> \

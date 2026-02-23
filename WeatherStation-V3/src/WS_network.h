@@ -37,7 +37,7 @@ void httpfields()
   
   server.send(200, "application/json",sendingValue);
 }
-void httpsensorAndFieldsIDs()
+void httpIDs()
 {
   String sendingValue="[";
   for(int i=0; i<SENSOR_COUNT; i++)
@@ -46,9 +46,14 @@ void httpsensorAndFieldsIDs()
   }
   for(int i=0; i<FIELD_COUNT; i++)
   {
-    sendingValue+="\""+fieldsIDNameTypePlaceholder[i][0]+"\""+(i<FIELD_COUNT-1? ",":"");
+    sendingValue+="\""+fieldsIDNameTypePlaceholder[i][0]+"\""+",";
+  }
+  for(int i=0; i<PINS_COUNT; i++)
+  {
+    sendingValue+="\""+pinIDName[i][0]+"\""+(i<PINS_COUNT-1? ",":"");
   }
   sendingValue+="]";
+  Serial.println(sendingValue);
   server.send(200, "application/json",sendingValue);
 
 }
@@ -77,6 +82,22 @@ void httpSensors()
     sendingValue+="{\"sensorID\":\""+toggleIDName[i][0]+"\",";
     sendingValue+="\"sensorName\":\""+toggleIDName[i][1]+"\",";
     sendingValue+="\"sensorToggle\":" + (String)( (bool)*(toggles[i]) ? "true" : "false" ) +"}"+(i<SENSOR_COUNT-1? ",":"");
+    
+
+  }
+  sendingValue+="]";
+  server.send(200, "application/json",sendingValue);
+
+}
+void httpPins()
+{
+  String sendingValue="[";
+  for(int i=0; i<PINS_COUNT; i++)
+  {
+
+    sendingValue+="{\"pinID\":\""+pinIDName[i][0]+"\",";
+    sendingValue+="\"pinName\":\""+pinIDName[i][1]+"\",";
+    sendingValue+="\"pinValue\":" + (String)*(pins[i]) +"}"+(i<PINS_COUNT-1? ",":"");
     
 
   }
@@ -124,6 +145,13 @@ void httpConfig()
   {
     sendingValue+="<br>"+toggleIDName[i][0]+": "+(String)( (bool)*(toggles[i]) ? "true" : "false" );
   }
+
+  for(int i=0; i<PINS_COUNT;i++)
+  {
+    sendingValue+="<br>"+pinIDName[i][0]+": "+(String)( *(pins[i]) );
+  }
+
+
   sendingValue+="<br><br><textarea rows=\"10\" cols=\"45\" readonly>"+infoString+" </textarea> <br>";  
   sendingValue+="<br><a href=\"/\"><input id=\"subm\" type=\"button\" value=\"Back\"></a><br><br>";
 
@@ -153,8 +181,8 @@ void httpConfig()
   sendingValue += "#define SPS30_TOGGLE " + String(SPS30_TOGGLE ? "true" : "false") + "<br>";
 
   sendingValue += "---------------------------<br>";
-  sendingValue += "int sda=" + String(sda) + ";<br>";
-  sendingValue += "int scl=" + String(scl) + ";<br>";
+  sendingValue += "int sda=" + String(sda_pin) + ";<br>";
+  sendingValue += "int scl=" + String(scl_pin) + ";<br>";
   sendingValue += "#define PM1006K_TX_PIN " + String(PM1006K_TX_PIN) + "<br>";
   sendingValue += "#define PM1006K_RX_PIN " + String(PM1006K_RX_PIN) + "<br>";
   sendingValue += "#define PMSX003_RX_PIN " + String(PMSX003_RX_PIN) + "<br>";
@@ -216,6 +244,10 @@ void httpData()
     for(int i=0; i<SENSOR_COUNT; i++)
     {//toggleIDName: i0-Sensor_Toggle i1-SensorName
       *toggles[i]=jsonDoc[toggleIDName[i][0]];
+    }
+    for(int i=0; i<PINS_COUNT;i++)
+    {
+      *pins[i]=(jsonDoc[pinIDName[i][0]].as<String>()).toInt();
     }
     for(int i=0; i<FIELD_COUNT;i++)
     {
@@ -282,10 +314,11 @@ void httpServicesStart()
   server.on("/restart", httpRestart);
   server.on("/titles", httpTitles);
   server.on("/sensors", httpSensors);
+  server.on("/pins", httpPins);
   server.on("/currentConfig", httpConfig);
   server.on("/wifi", httpWiFi);
   server.on("/fields", httpfields);
-  server.on("/sensorAndFieldsIDs", httpsensorAndFieldsIDs);
+  server.on("/IDs", httpIDs);
   server.onNotFound(httpDefault);
   server.begin();
 }

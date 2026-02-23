@@ -68,6 +68,37 @@
       flex-wrap: wrap;
 
     }
+    .pinovi {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+      width: 100%;
+      flex-wrap: wrap;
+      gap: 20px; /* space between pins */
+    }
+
+   .pin {
+      display: inline-flex;
+      flex-direction: column;
+      width: 5em;
+      align-items: center; 
+      margin-bottom: 10px;
+    }
+
+    .pin > label {
+      font-weight: bold;
+      text-align: center;
+      max-width: 100%;
+    }
+
+    .pin > input {
+      width: auto;  
+      max-width: 100%;  
+      text-align: center;
+      box-sizing: border-box;
+      margin-top: 3px;
+    }
+
 
     .senzor {
       display: flex;
@@ -235,6 +266,7 @@
     }
 
     let buttonHtml = "";
+    let pinsHtml = "";
     let isMaking=0;
     let firstRun=1;
     async function makeSensors() {
@@ -260,8 +292,29 @@
             '<input type="checkbox" placeholder="' + data[i].sensorID + '" required name="' + data[i].sensorID + '" id="' + data[i].sensorID + '" ' + (data[i].sensorToggle ? 'checked' : '') + '  value="">\n' +
             '</div>\n';
         }
+
+
+        const response2 = await fetch('/pins');
+        if (!response2.ok) {
+          console.error(`HTTP error! status: ${response2.status}`);
+          return;
+        }
+        const data2 = await response2.json();
+        console.log(data2);
+        pinsHtml = "";
+        for (let i = 0; i < data2.length; i++) {
+          pinsHtml +=
+            '<div class="pin">\n' +
+            '<label for="' + data2[i].pinID + '">' + data2[i].pinName + '</label>\n' +
+            '<input type="value" placeholder="' + data2[i].pinID + '" required name="' + data2[i].pinID + '" id="' + data2[i].pinID + '" value="'+data2[i].pinValue+'">\n' +
+            '</div>\n';
+        }
+
+
         console.log(buttonHtml);
-        document.getElementById('sensors').innerHTML = buttonHtml;
+        console.log(pinsHtml);
+        //document.getElementById('sensors').innerHTML = buttonHtml;
+        //document.getElementById('pins').innerHTML = pinsHtml;
       }
       catch (exception)
       {
@@ -287,8 +340,6 @@
       console.log(data);
       //const data=JSON.parse(jsonString);
       for (let i = 0; i < data.length; i++) {
-        if(data[i].fieldID==="mdns_hostname")
-          fieldsHtml += '<label for="sensors">Sensors:</label><div id="sensors" class="senzori"></div><br>'
 
         if(data[i].type==="checkbox")
           fieldsHtml +=
@@ -300,10 +351,15 @@
           fieldsHtml +=
             '<label for="' + data[i].fieldID + '">' + data[i].labelText + '</label></br>\n' +
             '<input style="width: 100%;" type="'+ data[i].type +'" placeholder="' + data[i].placeholder + '" required name="' + data[i].fieldID + '" id="' + data[i].fieldID + '" value="'+data[i].value+'">\n';
+        
+        if(data[i].fieldID==="mdns_hostname")
+          fieldsHtml += '<label for="sensors">Sensors:</label><div id="sensors" class="senzori"></div><br>'+'<label for="pins">Pins:</label><div id="pins" class="pinovi"></div><br>'
+        
       }
       console.log(fieldsHtml);
       document.getElementById('fields1').innerHTML = fieldsHtml;
       document.getElementById('sensors').innerHTML = buttonHtml;
+      document.getElementById('pins').innerHTML = pinsHtml;
       //document.getElementById('sensors').innerHTML = buttonHtml;
       fetchTitles();
       if(firstRun)setInterval(fetchTitles, 1000);
@@ -331,19 +387,24 @@
 
         // Gather form data
 
-      const sensorIDresponse = await fetch('/sensorAndFieldsIDs');
-      if (!sensorIDresponse.ok) {
-        console.error(`HTTP error! status: ${sensorIDresponse.status}`);
+      const IDsResponse = await fetch('/IDs');
+      if (!IDsResponse.ok) {
+        console.error(`HTTP error! status: ${IDsResponse.status}`);
         return;
       }
-      const sensorIDs = await sensorIDresponse.json();
+      const sensorIDs = await IDsResponse.json();
       console.log(sensorIDs);
 
 
       const getValue = id => {
         const el = document.getElementById(id);
+        if (!el) {
+          console.warn(`Element with ID "${id}" not found`);
+          return null;
+        }
         return el.type === 'checkbox' ? el.checked : el.value;
       };
+
       
       const data = sensorIDs.reduce((obj, field) => {
         obj[field] = getValue(field);

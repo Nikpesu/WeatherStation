@@ -22,7 +22,7 @@ void startProgram()
   loadConfig(); 
 
   //starting I2C interface
-  Wire.begin(sda,scl,100000);
+  Wire.begin(sda_pin,scl_pin);
 
 
   // false=wifi, true=hotspot

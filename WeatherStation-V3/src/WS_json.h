@@ -21,7 +21,6 @@ void loadConfig()
     // Parse the JSON object
     DynamicJsonDocument json(JSON_OBJECT_SIZE);
     DeserializationError error = deserializeJson(json, buffer);
-    // serializeJson(json, Serial); Serial.println();
     
 
     if (!error)
@@ -31,6 +30,7 @@ void loadConfig()
       {//toggleIDName: i0-Sensor_Toggle i1-SensorName
         *toggles[i]=json[toggleIDName[i][0]];
       }
+
       for(int i=0; i<FIELD_COUNT;i++)
       {
         String value = json[fieldsIDNameTypePlaceholder[i][0]].as<String>();
@@ -45,8 +45,14 @@ void loadConfig()
             *(fields[i]) = value;
         }
 
-      } 
+      }
+
+      for(int i=0; i<PINS_COUNT; i++)
+      {
+        *pins[i]=(json[pinIDName[i][0]].as<String>()).toInt();
+      }
       updateFieldsToNative();
+      //serializeJson(json, Serial); Serial.println();
     }
   else
   {
@@ -79,7 +85,14 @@ bool saveConfig()
   {
     json[fieldsIDNameTypePlaceholder[i][0]]= *(fields[i]);
   } 
-  //serializeJson(json, Serial); Serial.println();
+  for(int i=0; i<PINS_COUNT;i++)
+  {
+    json[pinIDName[i][0]]= *(pins[i]);
+  } 
+
+
+
+  serializeJson(json, Serial); Serial.println();
   
   Serial.println("["+runningTime()+"] copied to JSON; saveConfig ");
   // Open the JSON file for writing
