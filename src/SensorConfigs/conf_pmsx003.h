@@ -14,6 +14,7 @@ void pmsx003Reconfigure()
     //Serial1.begin(PM1006K::BAUD_RATE, SERIAL_8N1, PMSX003_RX_pin, PMSX003_TX_pin);
     //pmsx003 = new PM1006K(&Serial1);
     pmsx003=SerialPM(pmsx003Type, PMSX003_RX_pin, PMSX003_TX_pin);
+    
 }
 
 

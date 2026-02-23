@@ -28,7 +28,7 @@
 #include <PubSubClient.h>
 #include "SparkFun_ENS160.h"
 #include <AHTxx.h> 
-#include <sps30.h>
+#include <SensirionI2cSps30.h>
 #include "SparkFun_SCD4x_Arduino_Library.h" 
 #include <PMserial.h> 
 #include <deque>
@@ -394,7 +394,7 @@ Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SparkFun_ENS160 myENS; 
 AHTxx aht2x(AHTXX_ADDRESS_X38, AHT2x_SENSOR);
 SCD4x scd4x;
-//SPS30 sps30;
+SensirionI2cSps30 sps30;
 
 #if defined(ESP8266)
   SoftwareSerial pm1006Serial(PM1006K_TX_pin, PM1006K_RX_pin); 
