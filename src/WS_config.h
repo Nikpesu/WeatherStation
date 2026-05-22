@@ -76,73 +76,80 @@
 
 #if defined(SEEED_XIAO_ESP32C3)
   #define SDA_PIN D4
-  #define SDA_PIN D5
+  #define SCL_PIN D5
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
   #define PMSX003_TX_PIN D6
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
+  #define FAN_PIN D2
   #define BOARDIMGLINK "https://files.seeedstudio.com/wiki/XIAO_WiFi/pin_map-2.png"
 #elif defined(LOLIN_S2_MINI)
   #define SDA_PIN 4
-  #define SDA_PIN 5
+  #define SCL_PIN 5
   #define PM1006K_TX_PIN 13
   #define PM1006K_RX_PIN 14
   #define PMSX003_RX_PIN 14
   #define PMSX003_TX_PIN 13
   #define RESET_CONFIG_PIN 0
   #define HOTSPOT_PIN 12
+  #define FAN_PIN 2
   #define BOARDIMGLINK "https://www.wemos.cc/en/latest/_images/s2_mini_v1.0.0_4_16x9.jpg"
 #elif defined(SEEED_XIAO_ESP32C6)
   #define SDA_PIN D4
-  #define SDA_PIN D5
+  #define SCL_PIN D5
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
   #define PMSX003_TX_PIN D6
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
+  #define FAN_PIN D2
   #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
 #elif defined(SEEED_XIAO_ESP32S3)
   #define SDA_PIN D4
-  #define SDA_PIN D5
+  #define SCL_PIN D5
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
   #define PMSX003_TX_PIN D6
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
+  #define FAN_PIN __dead2
   #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
 #elif defined(ESP32DOIT_DEVKIT_V1)
   #define SDA_PIN 21
-  #define SDA_PIN 22
+  #define SCL_PIN 22
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
   #define PMSX003_TX_PIN D6
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
+  #define FAN_PIN D2
   #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2018/08/ESP32-DOIT-DEVKIT-V1-Board-Pinout-36-GPIOs-updated.jpg?resize=750%2C538&quality=100&strip=all&ssl=1"
 #elif defined(AZ_DELIVERY_DEVKIT_V4)
   #define SDA_PIN 21
-  #define SDA_PIN 22
+  #define SCL_PIN 22
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
   #define PMSX003_TX_PIN D6
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
+  #define FAN_PIN D2
   #define BOARDIMGLINK "https://media.s-bol.com/x75zGxQXKlZl/Q0XOo6q/550x558.jpg"
 #elif defined(ESP32)
   #define SDA_PIN 21
-  #define SDA_PIN 22
+  #define SCL_PIN 22
   #define PM1006K_TX_PIN D9
   #define PM1006K_RX_PIN D8
   #define PMSX003_RX_PIN D7
   #define PMSX003_TX_PIN D6
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
+  #define FAN_PIN D2
   #define BOARDIMGLINK "https://www.upesy.com/cdn/shop/files/doc-esp32-pinout-reference-wroom-devkit.png"
 #elif defined(D1_MINI)  //esp8266
   #define SDA_PIN D2
@@ -157,14 +164,14 @@
   #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2019/05/ESP8266-WeMos-D1-Mini-pinout-gpio-pin.png?resize=715%2C362&quality=100&strip=all&ssl=1"
 #elif defined(ESP8266)
   #define SDA_PIN 4
-  #define SDA_PIN 5
+  #define SCL_PIN 5
   #define PM1006K_RX_PIN SERIAL_TX_ONLY
   #define PM1006K_TX_PIN D8
   #define PMSX003_RX_PIN D5
   #define PMSX003_TX_PIN D7
   #define RESET_CONFIG_PIN D3
   #define HOTSPOT_PIN D6
-  #define FAN_PIN D4
+  #define FAN_PIN D2
   #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2019/05/ESP8266-NodeMCU-kit-12-E-pinout-gpio-pin.png?resize=817%2C542&quality=100&strip=all&ssl=1"
 #endif
 

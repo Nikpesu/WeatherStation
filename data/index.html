@@ -1,568 +1,959 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en" data-theme="dark">
 <head>
   <title>Weatherstation</title>
-  <meta name="viewport" content="initial-scale=1.0">
+  <meta name="viewport" content="initial-scale=1.0, width=device-width" charset="UTF-8">
+  
   <link rel="icon" type="image/x-icon"
     href="https://www.espressif.com/sites/all/themes/espressif/images/esp32-c61/icon-series-mobile.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ══════════════════════════════════════
+       THEMES
+    ══════════════════════════════════════ */
+
+    [data-theme="dark"] {
+      --bg:        #0d1117;
+      --bg2:       #161b22;
+      --bg3:       #1c2330;
+      --border:    #30363d;
+      --border-hi: #58a6ff;
+      --text:      #e6edf3;
+      --text-dim:  #7d8590;
+      --text-mono: #79c0ff;
+      --accent:    #58a6ff;
+      --accent2:   #3fb950;
+      --warn:      #d29922;
+      --danger:    #f85149;
+      --glow1: rgba(88,166,255,0.05);
+      --glow2: rgba(63,185,80,0.03);
+      --shadow: 0 0 0 1px var(--border), 0 4px 28px rgba(0,0,0,0.55);
+      --title-shadow: 0 0 28px rgba(88,166,255,0.35);
+    }
+
+    [data-theme="light"] {
+      --bg:        #f5f6fa;
+      --bg2:       #ffffff;
+      --bg3:       #eef0f4;
+      --border:    #d0d5dd;
+      --border-hi: #2563eb;
+      --text:      #1a202c;
+      --text-dim:  #6b7280;
+      --text-mono: #1d4ed8;
+      --accent:    #2563eb;
+      --accent2:   #16a34a;
+      --warn:      #b45309;
+      --danger:    #dc2626;
+      --glow1: rgba(37,99,235,0.04);
+      --glow2: rgba(22,163,74,0.03);
+      --shadow: 0 0 0 1px var(--border), 0 4px 20px rgba(0,0,0,0.08);
+      --title-shadow: none;
+    }
+
+    [data-theme="terminal"] {
+      --bg:        #0a0f00;
+      --bg2:       #0f1a00;
+      --bg3:       #142000;
+      --border:    #2a4a00;
+      --border-hi: #39ff14;
+      --text:      #b4e64a;
+      --text-dim:  #5a8a20;
+      --text-mono: #39ff14;
+      --accent:    #39ff14;
+      --accent2:   #7fff00;
+      --warn:      #ffcc00;
+      --danger:    #ff4444;
+      --glow1: rgba(57,255,20,0.06);
+      --glow2: rgba(127,255,0,0.03);
+      --shadow: 0 0 0 1px var(--border), 0 4px 28px rgba(0,0,0,0.7), 0 0 40px rgba(57,255,20,0.04);
+      --title-shadow: 0 0 30px rgba(57,255,20,0.6), 0 0 60px rgba(57,255,20,0.2);
+    }
+
+    [data-theme="amber"] {
+      --bg:        #120900;
+      --bg2:       #1c1000;
+      --bg3:       #251600;
+      --border:    #4a2e00;
+      --border-hi: #ffaa00;
+      --text:      #ffd080;
+      --text-dim:  #8a6020;
+      --text-mono: #ffcc44;
+      --accent:    #ffaa00;
+      --accent2:   #ffdd44;
+      --warn:      #ff7700;
+      --danger:    #ff4444;
+      --glow1: rgba(255,170,0,0.06);
+      --glow2: rgba(255,221,68,0.03);
+      --shadow: 0 0 0 1px var(--border), 0 4px 28px rgba(0,0,0,0.7), 0 0 40px rgba(255,170,0,0.04);
+      --title-shadow: 0 0 30px rgba(255,170,0,0.6), 0 0 60px rgba(255,170,0,0.2);
+    }
+
+    /* ══════════════════════════════════════
+       BASE
+    ══════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 18px; } /* base font size - everything scales from here */
+
     body {
-      margin: 0px;
-      padding: 0px;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 20% 10%, var(--glow1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, var(--glow2) 0%, transparent 50%);
+      color: var(--text);
+      font-family: 'Exo 2', sans-serif;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      max-width: 100vw;
-
-    }
-
-    h2,
-    h3 {
-      width: 90%;
-      margin-top: 0px;
-      text-align: center;
-    }
-
-    form {
-      display: flex;
       align-items: center;
-      flex-direction: column;
-      max-width: 100%;
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: large;
-      font-weight: bold;
+      padding: 0 1rem 3rem;
+      transition: background 0.3s, color 0.3s;
     }
 
-    form>div {
-      max-width: 80%;
-    }
-
-    #myForm>div {
-
-      display: flex;
-      justify-content: center;
-      align-content: center;
-      flex-direction: column;
+    /* ── Theme switcher ── */
+    .theme-bar {
       width: 100%;
-      align-content: center;
-    }
-
-    body {
-      background-color: rgba(196, 196, 196, 0.411);
-      font-family: Arial, Helvetica, sans-serif;
+      max-width: 640px;
       display: flex;
-      justify-content: center;
-      align-content: center;
-      flex-direction: column;
-      width: auto;
-      align-content: center;
-      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 0;
     }
 
+    .theme-bar-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-right: 0.2rem;
+    }
+
+    .theme-btn {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      padding: 0;
+      background: none;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .theme-btn::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 50%;
+    }
+
+    .theme-btn:hover  { transform: scale(2); }
+    .theme-btn.active { border-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+    .theme-btn[data-t="dark"]::after     { background: radial-gradient(135deg, #30363d 40%, #0d1117); box-shadow: inset 0 0 4px rgb(0, 60, 255); }
+    .theme-btn[data-t="light"]::after    { background: radial-gradient(135deg, #e2e8f0 40%, #ffffff); box-shadow: inset 0 0 4px rgba(255,255,255,0.5);}
+    .theme-btn[data-t="terminal"]::after { background: radial-gradient(135deg, #2a4a00 40%, #0a0f00); box-shadow: inset 0 0 4px rgba(57,255,20,0.5); }
+    .theme-btn[data-t="amber"]::after    { background: radial-gradient(135deg, #4a2e00 40%, #120900); box-shadow: inset 0 0 4px rgba(255,170,0,0.5); }
+
+    /* ── Header ── */
+    .site-header {
+      width: 100%;
+      max-width: 640px;
+      padding: 0.5rem 0 1.5rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .site-header::after {
+      content: '';
+      display: block;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-hi), transparent);
+      margin-top: 1.5rem;
+      opacity: 0.35;
+    }
+
+    #title1 {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-shadow: var(--title-shadow);
+      margin-bottom: 0.4rem;
+    }
+
+    #title2 {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      margin-bottom: 0.15rem;
+    }
+
+    #title3 {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      opacity: 0.65;
+    }
+
+    /* ── Main card ── */
+    .main-card {
+      width: 100%;
+      max-width: 640px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .section { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    /* ── Generated field labels ── */
+    #fields1 label {
+      display: block;
+      font-size: 0.72rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.1em !important;
+      text-transform: uppercase !important;
+      color: var(--text-dim) !important;
+      font-family: 'Share Tech Mono', monospace !important;
+      margin-top: 1rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+
+    #fields1 label[for="sensors"],
+    #fields1 label[for="pins"] {
+      margin-top: 1.4rem !important;
+      padding-bottom: 0.4rem !important;
+      border-bottom: 1px solid var(--border) !important;
+      width: 100% !important;
+    }
+
+    /* ── Text / password / number inputs ── */
+    input[type="text"],
+    input[type="password"],
+    input[type="number"] {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      font-size: 1rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-mono);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s, background 0.3s, color 0.3s;
+      -moz-appearance: textfield;
+      appearance: textfield;
+      height: auto;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88,166,255,0.12);
+    }
+
+    input[type="text"]:hover,
+    input[type="password"]:hover,
+    input[type="number"]:hover { border-color: var(--border-hi); }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* ── Toggle checkbox ── */
+    input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 3rem;
+      height: 1.6rem;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      width: 1.2rem;
+      height: 1.2rem;
+      background: var(--text-dim);
+      border-radius: 50%;
+      top: 50%;
+      left: 0.17rem;
+      transform: translateY(-50%);
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    input[type="checkbox"]:checked {
+      background: rgba(63,185,80,0.2);
+      border-color: var(--accent2);
+    }
+
+    input[type="checkbox"]:checked::after {
+      transform: translateY(-50%) translateX(1.4rem);
+      background: var(--accent2);
+    }
+
+    /* ── Select ── */
+    select {
+      flex: 1;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.95rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-mono);
+      background: var(--bg3) !important;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.3s, color 0.3s;
+    }
+
+    select:hover, select:focus { border-color: var(--accent); }
+    option { background: var(--bg3); color: var(--text); }
+
+    .wifi-row { display: flex; gap: 0.5rem; align-items: stretch; }
+
+    /* ── Buttons ── */
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.65rem 1.2rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+      background: none;
+      text-decoration: none;
+    }
+
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+
+    .btn-scan {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .btn-scan:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 1.05rem;
+      color: var(--bg);
+      background: var(--accent);
+      border-color: var(--accent);
+      border-radius: 8px;
+      box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 35%, transparent);
+      letter-spacing: 0.08em;
+    }
+    .btn-submit:hover {
+      filter: brightness(1.12);
+      box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 50%, transparent);
+    }
+
+    .action-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+    .btn-restore {
+      color: var(--warn); border-color: var(--warn);
+      background: color-mix(in srgb, var(--warn) 10%, transparent); flex: 1;
+    }
+    .btn-restore:hover { background: color-mix(in srgb, var(--warn) 20%, transparent); }
+
+    .btn-config {
+      color: var(--accent2); border-color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 10%, transparent); flex: 1; width: 100%;
+    }
+    .btn-config:hover { background: color-mix(in srgb, var(--accent2) 20%, transparent); }
+
+    .btn-restart {
+      color: var(--danger); border-color: var(--danger);
+      background: color-mix(in srgb, var(--danger) 10%, transparent); flex: 1;
+    }
+    .btn-restart:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); }
+
+    /* ── Sensors grid ── */
     .senzori {
       display: flex;
-      justify-content: space-around;
-      align-items: center;
-      width: 100%;
-      flex-direction: row;
       flex-wrap: wrap;
-
-    }
-    .pinovi {
-      display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
+      gap: 0.5rem;
       width: 100%;
-      flex-wrap: wrap;
-      gap: 20px; /* space between pins */
+      margin-top: 0.4rem;
     }
-
-   .pin {
-      display: inline-flex;
-      flex-direction: column;
-      width: 5em;
-      align-items: center; 
-      margin-bottom: 10px;
-    }
-
-    .pin > label {
-      font-weight: bold;
-      text-align: center;
-      max-width: 100%;
-    }
-
-    .pin > input {
-      width: auto;  
-      max-width: 100%;  
-      text-align: center;
-      box-sizing: border-box;
-      margin-top: 3px;
-    }
-
 
     .senzor {
       display: flex;
-      padding: 5px;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.8rem;
+      transition: border-color 0.18s, background 0.18s;
+      cursor: pointer;
+    }
+
+    .senzor:has(input:checked) {
+      border-color: color-mix(in srgb, var(--accent2) 60%, transparent);
+      background: color-mix(in srgb, var(--accent2) 8%, transparent);
+    }
+
+    .senzor label {
+      font-family: 'Share Tech Mono', monospace !important;
+      font-size: 0.88rem !important;
+      color: var(--text) !important;
+      text-transform: none !important;
+      letter-spacing: 0.01em !important;
+      margin: 0 !important;
+      border: none !important;
+      padding: 0 !important;
+      cursor: pointer;
+    }
+
+    .senzor input[type="checkbox"] {
+      width: 2rem;
+      height: 1.1rem;
+    }
+    .senzor input[type="checkbox"]::after {
+      width: 0.78rem;
+      height: 0.78rem;
+      left: 0.13rem;
+    }
+    .senzor input[type="checkbox"]:checked::after {
+      transform: translateY(-50%) translateX(0.9rem);
+    }
+
+    /* ── Pins ── */
+    .pinovi {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      width: 100%;
+      margin-top: 0.4rem;
+    }
+
+    .pin {
+      display: flex;
       flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
     }
 
-    label {
-      align-self: center;
-      margin-top: 1em;
+    .pin label {
+      font-family: 'Share Tech Mono', monospace !important;
+      font-size: 0.7rem !important;
+      color: var(--text-dim) !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.08em !important;
+      margin: 0 !important;
+      border: none !important;
+      padding: 0 !important;
     }
 
-    input {
-      height: 1.7em;
-      font-size: 1.6em;
-      background-color: gainsboro;
-      border-radius: 0.3em;
-      border: gray 1px solid;
-      transition: 0.2s;
-      color: rgb(0, 31, 78);
+    .pin input[type="text"] {
+      width: 5rem;
+      text-align: center;
+      padding: 0.4rem 0.3rem;
+      font-size: 0.95rem;
     }
 
-    select:hover {
-      border-color: rgb(82, 82, 82);
-      background-color: rgb(175, 175, 175) !important;
-      transition: 0.2s;
-      color: rgb(0, 0, 0);
-    }
-
-    #updateDropdownBtn {
-      min-width: 4em;
-      height: 100%;
-      margin-top: 0px;
-    }
-
-    #dropdowndiv {
-      margin-top: 0.2em;
-      height: 5em;
+    /* ── Footer ── */
+    footer {
       width: 100%;
+      max-width: 640px;
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
 
-    select,
-    select:focus {
-      padding: 0.35em;
-      height: auto;
-      width: 100%;
-      margin-left: 1em;
-      font-size: 1em;
-
+    .footer-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+      box-shadow: var(--shadow);
+      transition: background 0.3s, border-color 0.3s;
     }
 
-    select,
-    select:focus {
-      padding: 0.35em;
-      font-size: 1.6em;
-      background-color: gainsboro !important;
-      border-radius: 0.3em;
-      border: gray 1px solid;
-      transition: 0.2s;
-      color: rgb(0, 31, 78);
+    .footer-card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0.75rem;
     }
 
+    #footerText {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+    #footerText p { margin: 0; }
 
+    .feature-grid { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 
-    option {
-
-      background-color: gainsboro;
+    .feature-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.76rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--text-dim);
+      transition: all 0.25s;
     }
 
-    input[type="button"] {
-      height: 3em;
-      margin-top: 1em;
-
+    .feature-item.ok   {
+      border-color: color-mix(in srgb, var(--accent2) 55%, transparent);
+      color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 10%, transparent);
+    }
+    .feature-item.fail {
+      border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+      color: var(--danger);
+      background: color-mix(in srgb, var(--danger) 10%, transparent);
     }
 
-    input:hover {
-      border-color: rgb(82, 82, 82);
-      background-color: rgb(175, 175, 175);
-      transition: 0.2s;
+    .feat-dot { font-size: 0.5rem; }
+    .feat-ep  { opacity: 0.5; font-size: 0.68rem; }
+
+    .footer-credit {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      padding-bottom: 0.5rem;
+    }
+    .footer-credit a { color: var(--accent); text-decoration: none; }
+    .footer-credit a:hover { text-decoration: underline; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    input[type="button"]:active {
-      border-color: rgb(80, 78, 78);
-      background-color: rgb(100, 112, 117);
-      color: white;
+    .theme-bar    { animation: fadeUp 0.3s ease both; }
+    .site-header  { animation: fadeUp 0.35s 0.05s ease both; }
+    .main-card    { animation: fadeUp 0.35s 0.1s ease both; }
+    footer        { animation: fadeUp 0.35s 0.18s ease both; }
 
-    }
-
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 1;
-    }
-
-    input[type=number] {
-      -moz-appearance: textfield;
-      appearance: textfield;
+    /* terminal scanline effect */
+    [data-theme="terminal"] body::before,
+    [data-theme="amber"] body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
     }
   </style>
+
   <script defer async>
-    function updateSSIDClick() {
-      let dropdown = document.getElementById('wifi_ssid_dropdown');
-      let selectedText = dropdown.options[dropdown.selectedIndex].value
-      document.getElementById('wifi_ssid').value = selectedText;
-      console.log("set wifi: " + selectedText);
+    /* ── Theme switcher ── */
+    const THEMES = ['dark', 'light', 'terminal', 'amber'];
+
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      try { localStorage.setItem('ws-theme', t); } catch(e) {}
+      document.querySelectorAll('.theme-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.t === t);
+      });
+    }
+
+    function initTheme() {
+      let saved = 'dark';
+      try { saved = localStorage.getItem('ws-theme') || 'dark'; } catch(e) {}
+      applyTheme(THEMES.includes(saved) ? saved : 'dark');
+    }
+
+    /* ── Shared state ── */
+    let buttonHtml = "";
+    let pinsHtml = "";
+    let isMaking = 0;
+    let isFetching = 0;
+    let firstRun = 1;
+
+    /* ── Feature tracking ── */
+    const features = {
+      '/fields':  { label: 'Config fields', status: null },
+      '/sensors': { label: 'Sensors',       status: null },
+      '/pins':    { label: 'Pin config',    status: null },
+      '/titles':  { label: 'Live titles',   status: null },
+      '/wifi':    { label: 'WiFi scan',     status: null },
+      '/data':    { label: 'Save config',   status: null },
+      '/restart': { label: 'Restart ESP',   status: null },
+    };
+
+    function updateFeatureStatus(endpoint, ok) {
+      features[endpoint].status = ok;
+      renderFeatureList();
+    }
+
+    function renderFeatureList() {
+      const el = document.getElementById('featureList');
+      if (!el) return;
+      el.innerHTML = Object.entries(features).map(([ep, f]) => {
+        const cls = f.status === null ? '' : f.status ? ' ok' : ' fail';
+        return `<span class="feature-item${cls}"><span class="feat-dot">●</span>${f.label}<span class="feat-ep">${ep}</span></span>`;
+      }).join('');
+    }
+
+    /* ── Fetch helper ── */
+    async function fetchJSON(url, options = {}) {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status} on ${url}`);
+      const ct = response.headers.get('content-type');
+      if (!ct || !ct.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Expected JSON from ${url} but got:\n${text.substring(0, 200)}`);
+      }
+      return response.json();
     }
 
     function updateSSIDClick() {
-      let dropdown = document.getElementById('wifi_ssid_dropdown');
-      let selectedText = dropdown.options[dropdown.selectedIndex].value
-      document.getElementById('wifi_ssid').value = selectedText;
-      console.log("set wifi: " + selectedText);
+      const dd = document.getElementById('wifi_ssid_dropdown');
+      const wifiInput = document.getElementById('wifi_ssid');
+      if (wifiInput) wifiInput.value = dd.options[dd.selectedIndex].value;
     }
-   
+
     async function updateSSIDDropdown() {
-      document.getElementById('wifi_ssid_dropdown').innerHTML = '<option onClick="updateSSIDClick()" value="' + document.getElementById('wifi_ssid').value + '" >Updating...</option>';
-      //return;
+      const btn = document.getElementById('updateDropdownBtn');
+      btn.textContent = '…';
+      btn.disabled = true;
+      document.getElementById('wifi_ssid_dropdown').innerHTML = '<option value="">Scanning…</option>';
       try {
-        const response = await fetch('/wifi');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-          return;
-        }
-        const data = await response.json();
-        console.log(data);
-
-        let ssidDropdownHtml = "";
-        //const data=JSON.parse(jsonString);
-        console.log(data[0].sensorID);
-        for (let i = 0; i < data.length; i++) {
-          ssidDropdownHtml +=
-            '<option onClick="updateSSIDClick()" value="' + data[i].ssid + '">' + data[i].rssi + " " + data[i].ssid + '</option>\n';
-        }
-        console.log(ssidDropdownHtml);
-        document.getElementById('wifi_ssid_dropdown').innerHTML = ssidDropdownHtml;
-      } catch (error) {
-        console.log(document.getElementById('wifi_ssid_dropdown').innerHTML);
-        document.getElementById('wifi_ssid_dropdown').innerHTML = '<option value="dsa" onClick="updateSSIDClick()" >error</option>';
+        const data = await fetchJSON('/wifi');
+        let html = "";
+        for (let i = 0; i < data.length; i++)
+          html += `<option value="${data[i].ssid}">${data[i].rssi}  ${data[i].ssid}</option>\n`;
+        document.getElementById('wifi_ssid_dropdown').innerHTML = html;
+        updateFeatureStatus('/wifi', true);
+      } catch (e) {
+        console.warn('/wifi:', e.message);
+        document.getElementById('wifi_ssid_dropdown').innerHTML = '<option value="">Scan failed</option>';
+        updateFeatureStatus('/wifi', false);
+      } finally {
+        btn.textContent = 'Scan';
+        btn.disabled = false;
       }
     }
-    
-    let isFetching=0;
+
     async function fetchTitles() {
-      if(isFetching) return;
+      if (isFetching) return;
+      isFetching = 1;
       try {
-        isFetching=1;
-        const response = await fetch('/titles');
-        if (!response.ok) {
-          console.error(`HTTP error! status: ${response.status}`);
-          document.getElementById('title3').textContent = 'Error fetching ' + location.protocol + '//' + location.hostname + ':' + location.port + '/titles';
-          return;
-        }
-        const data = await response.json();
-        console.log(data);
+        const data = await fetchJSON('/titles');
         document.getElementById('title1').textContent = data.title1;
         document.getElementById('title2').textContent = data.title2;
         document.getElementById('title3').textContent = data.title3;
         document.getElementById('footerText').innerHTML = data.footerText;
-      } catch (error) {
-        console.error('Error:', error);
-      }
-      finally{
-        isFetching=0;
+        updateFeatureStatus('/titles', true);
+      } catch (e) {
+        console.warn('/titles:', e.message);
+        updateFeatureStatus('/titles', false);
+      } finally {
+        isFetching = 0;
       }
     }
 
-    let buttonHtml = "";
-    let pinsHtml = "";
-    let isMaking=0;
-    let firstRun=1;
     async function makeSensors() {
-      if(isMaking)return;
-      isMaking=1;
-      try{
-        const response = await fetch('/sensors');
-        if (!response.ok) {
-          console.error(`HTTP error! status: ${response.status}`);
-          return;
-        }
-        const data = await response.json();
-        console.log(data);
+      if (isMaking) return;
+      isMaking = 1;
 
-        //const data=JSON.parse(jsonString);
-        console.log(data[0].sensorID);
-
+      try {
+        const data = await fetchJSON('/sensors');
         buttonHtml = "";
-        for (let i = 0; i < data.length; i++) {
+        for (let i = 0; i < data.length; i++)
           buttonHtml +=
-            '<div class="senzor">\n' +
-            '<label for="' + data[i].sensorID + '">' + data[i].sensorName + '</label>\n' +
-            '<input type="checkbox" placeholder="' + data[i].sensorID + '" required name="' + data[i].sensorID + '" id="' + data[i].sensorID + '" ' + (data[i].sensorToggle ? 'checked' : '') + '  value="">\n' +
-            '</div>\n';
-        }
+            `<div class="senzor">` +
+            `<input type="checkbox" name="${data[i].sensorID}" id="${data[i].sensorID}" ${data[i].sensorToggle ? 'checked' : ''} value="">` +
+            `<label for="${data[i].sensorID}">${data[i].sensorName}</label>` +
+            `</div>\n`;
+        updateFeatureStatus('/sensors', true);
+      } catch (e) {
+        console.warn('/sensors:', e.message);
+        buttonHtml = "";
+        updateFeatureStatus('/sensors', false);
+      }
 
-
-        const response2 = await fetch('/pins');
-        if (!response2.ok) {
-          console.error(`HTTP error! status: ${response2.status}`);
-          return;
-        }
-        const data2 = await response2.json();
-        console.log(data2);
+      try {
+        const data2 = await fetchJSON('/pins');
         pinsHtml = "";
-        for (let i = 0; i < data2.length; i++) {
+        for (let i = 0; i < data2.length; i++)
           pinsHtml +=
-            '<div class="pin">\n' +
-            '<label for="' + data2[i].pinID + '">' + data2[i].pinName + '</label>\n' +
-            '<input type="value" placeholder="' + data2[i].pinID + '" required name="' + data2[i].pinID + '" id="' + data2[i].pinID + '" value="'+data2[i].pinValue+'">\n' +
-            '</div>\n';
-        }
+            `<div class="pin">` +
+            `<label for="${data2[i].pinID}">${data2[i].pinName}</label>` +
+            `<input type="text" name="${data2[i].pinID}" id="${data2[i].pinID}" value="${data2[i].pinValue}">` +
+            `</div>\n`;
+        updateFeatureStatus('/pins', true);
+      } catch (e) {
+        console.warn('/pins:', e.message);
+        pinsHtml = "";
+        updateFeatureStatus('/pins', false);
+      }
 
-
-        console.log(buttonHtml);
-        console.log(pinsHtml);
-        //document.getElementById('sensors').innerHTML = buttonHtml;
-        //document.getElementById('pins').innerHTML = pinsHtml;
-      }
-      catch (exception)
-      {
-        console.log(exception);
-      }
-      finally
-      {
-        isMaking=0;
-      }
-      
+      isMaking = 0;
     }
 
     async function makeFirstFieldBlock() {
-      let fieldsHtml = "";
-			//const data = [{"fieldID":"fieldID","labelText":"labelText","value":"value","placeholder":"placeholder"}];
       await makeSensors();
-      const response = await fetch('/fields');
-      if (!response.ok) {
-        console.error(`HTTP error! status: ${response.status}`);
-        return;
+      try {
+        const data = await fetchJSON('/fields');
+        let html = "";
+        for (let i = 0; i < data.length; i++) {
+          if (data[i].type === "checkbox")
+            html +=
+              `<label for="${data[i].fieldID}">${data[i].labelText}</label>` +
+              `<input style="width:100%;" type="checkbox" name="${data[i].fieldID}" id="${data[i].fieldID}" ${Boolean(Number(data[i].value)) ? 'checked' : ''}>\n`;
+          if (["text","password","number"].includes(data[i].type))
+            html +=
+              `<label for="${data[i].fieldID}">${data[i].labelText}</label>` +
+              `<input style="width:100%;" type="${data[i].type}" placeholder="${data[i].placeholder}" name="${data[i].fieldID}" id="${data[i].fieldID}" value="${data[i].value}">\n`;
+          if (data[i].fieldID === "mdns_hostname")
+            html +=
+              `<label for="sensors">Sensors</label><div id="sensors" class="senzori"></div>` +
+              (pinsHtml ? `<label for="pins">Pins</label><div id="pins" class="pinovi"></div>` : '');
+        }
+        document.getElementById('fields1').innerHTML = html;
+        document.getElementById('sensors').innerHTML = buttonHtml;
+        const pinsEl = document.getElementById('pins');
+        if (pinsEl && pinsHtml) pinsEl.innerHTML = pinsHtml;
+        updateFeatureStatus('/fields', true);
+      } catch (e) {
+        console.warn('/fields:', e.message);
+        updateFeatureStatus('/fields', false);
       }
-      const data = await response.json();
-      console.log(data);
-      //const data=JSON.parse(jsonString);
-      for (let i = 0; i < data.length; i++) {
 
-        if(data[i].type==="checkbox")
-          fieldsHtml +=
-            '<label for="' + data[i].fieldID + '">' + data[i].labelText + '</label></br>\n' +
-            '<input style="width: 100%;" type="'+ data[i].type +'" placeholder="' + data[i].placeholder + '" required name="' + data[i].fieldID + '" id="' + data[i].fieldID + '" '+(Boolean(Number(data[i].value)) ? 'checked':'')+'>\n';
+      try { await fetchTitles(); }
+      catch (e) { console.warn('/titles:', e.message); }
 
-
-        if(data[i].type==="text" || data[i].type==="password" || data[i].type==="number")
-          fieldsHtml +=
-            '<label for="' + data[i].fieldID + '">' + data[i].labelText + '</label></br>\n' +
-            '<input style="width: 100%;" type="'+ data[i].type +'" placeholder="' + data[i].placeholder + '" required name="' + data[i].fieldID + '" id="' + data[i].fieldID + '" value="'+data[i].value+'">\n';
-        
-        if(data[i].fieldID==="mdns_hostname")
-          fieldsHtml += '<label for="sensors">Sensors:</label><div id="sensors" class="senzori"></div><br>'+'<label for="pins">Pins:</label><div id="pins" class="pinovi"></div><br>'
-        
-      }
-      console.log(fieldsHtml);
-      document.getElementById('fields1').innerHTML = fieldsHtml;
-      document.getElementById('sensors').innerHTML = buttonHtml;
-      document.getElementById('pins').innerHTML = pinsHtml;
-      //document.getElementById('sensors').innerHTML = buttonHtml;
-      fetchTitles();
-      if(firstRun)setInterval(fetchTitles, 1000);
-      firstRun=0;
+      if (firstRun) setInterval(fetchTitles, 1000);
+      firstRun = 0;
+      renderFeatureList();
     }
 
-  const delay = (delayInms) => {
-    return new Promise(resolve => setTimeout(resolve, delayInms));
-  };
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+
     let isSendingData = false;
     async function sendData() {
-      if (isSendingData) return;  // prevent multiple calls
+      if (isSendingData) return;
       isSendingData = true;
-
       const button = document.getElementById('SubmitBtn');
-      const originalText = button.value;
-      const originalBackground = button.style.backgroundColor;
-
+      const originalText = button.textContent;
       try {
-        // Disable the button and show sending state
         button.disabled = true;
-        button.style.pointerEvents = 'none';
-        button.style.backgroundColor = 'orange';
-        button.value = 'Sending...';
+        button.style.cssText = 'background:var(--warn);border-color:var(--warn);color:var(--bg);';
+        button.textContent = 'Sending…';
 
-        // Gather form data
+        let fieldsData = [], sensorsData = [], pinsData = [];
+        try { fieldsData  = await fetchJSON('/fields');  } catch (e) { console.warn(e.message); }
+        try { sensorsData = await fetchJSON('/sensors'); } catch (e) { console.warn(e.message); }
+        try { pinsData    = await fetchJSON('/pins');    } catch (e) { console.warn(e.message); }
 
-      const IDsResponse = await fetch('/IDs');
-      if (!IDsResponse.ok) {
-        console.error(`HTTP error! status: ${IDsResponse.status}`);
-        return;
-      }
-      const sensorIDs = await IDsResponse.json();
-      console.log(sensorIDs);
+        const allIDs = [
+          ...fieldsData.map(f => f.fieldID),
+          ...sensorsData.map(s => s.sensorID),
+          ...pinsData.map(p => p.pinID)
+        ];
 
+        const getValue = id => {
+          const el = document.getElementById(id);
+          if (!el) { console.warn(`Element "${id}" not found`); return null; }
+          return el.type === 'checkbox' ? el.checked : el.value;
+        };
 
-      const getValue = id => {
-        const el = document.getElementById(id);
-        if (!el) {
-          console.warn(`Element with ID "${id}" not found`);
-          return null;
-        }
-        return el.type === 'checkbox' ? el.checked : el.value;
-      };
+        const data = allIDs.reduce((obj, id) => { obj[id] = getValue(id); return obj; }, {});
 
-      
-      const data = sensorIDs.reduce((obj, field) => {
-        obj[field] = getValue(field);
-        return obj;
-      }, {});
-
-
-        const response = await fetch('/data', {
+        const result = await fetchJSON('/data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (result.message === "bad!") throw new Error("JSON failed parsing on server");
+        updateFeatureStatus('/data', true);
+        button.style.cssText = 'background:var(--accent2);border-color:var(--accent2);color:var(--bg);';
+        button.textContent = result.message || 'Saved!';
+
+        if (result.new_mdns !== undefined) {
+          button.textContent = `${result.message} — redirecting…`;
+          button.style.cssText = 'background:var(--accent);border-color:var(--accent);color:var(--bg);';
+          while (true) {
+            fetch(result.new_mdns, { method: 'HEAD', mode: 'no-cors' })
+              .then(() => { window.location.href = result.new_mdns; })
+              .catch(() => {});
+            await delay(1000);
+          }
         }
-
-        const result = await response.json();  // parse JSON response
-
-        // OPTIONAL: Check server message
-        if (result.message === "bad!") {
-          throw new Error("JSON failed parsing on server");
-        }
-        console.log('Server status:', response.status);
-        console.log('Server response:', result);
-
-      if(!(result.new_mdns === undefined))
-      {
-        button.value=result.message+`\nFound new_mdns, redirecting: ${result.new_mdns}`;
-        button.style.backgroundColor = 'cyan';
-      }
-      else 
-      {
-        button.value = result.message;
-        button.style.backgroundColor = 'green';
-      }
-      while (!(result.new_mdns === undefined)) {
-        let url=result.new_mdns;
-        fetch(url, { method: 'HEAD', mode: 'no-cors' })
-          .then(() => {
-            console.log(`Redirecting to ${url}`);
-            window.location.href = url;
-          })
-          .catch(() => {
-            console.log(`Still waiting for ${url}...`);
-          });      
-          let delayres = await delay(1000);  
-      }
-
       } catch (error) {
-        button.style.backgroundColor = 'red';
-        button.value = "Error! Check console";
+        button.style.cssText = 'background:var(--danger);border-color:var(--danger);color:#fff;';
+        button.textContent = 'Error — check console';
         console.error('Request error:', error);
+        updateFeatureStatus('/data', false);
       } finally {
-
         setTimeout(() => {
-          button.value = originalText;
+          button.textContent = originalText;
           button.disabled = false;
-          button.style.pointerEvents = 'auto';
-          button.style.backgroundColor = originalBackground;
+          button.style.cssText = '';
           isSendingData = false;
-        }, 2000);
-
-        // OPTIONAL: If you used the timeout, clear it here
-        // clearTimeout(timeout);
+        }, 2500);
       }
     }
 
-    let isRestarting = false;  // global flag
+    let isRestarting = false;
     async function restartESP() {
-      if (isRestarting) return;  // prevent multiple calls
+      if (isRestarting) return;
       isRestarting = true;
       const button = document.getElementById('restartBtn');
       button.disabled = true;
-      button.style.pointerEvents = 'none';
-
       try {
-        button.value = "Restarting...";
-        const response = await fetch('/restart');
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(data);
-        button.value = data.restart || "RESTARTED!";
-
-      } catch (error) {
-        console.error('Error:', error);
-        button.value = "Error! check console";
+        button.textContent = '⏻ Restarting…';
+        const data = await fetchJSON('/restart');
+        button.textContent = data.restart || 'Restarted!';
+        updateFeatureStatus('/restart', true);
+      } catch (e) {
+        console.warn('/restart:', e.message);
+        button.textContent = 'Error';
+        updateFeatureStatus('/restart', false);
       } finally {
         setTimeout(() => {
-          button.value = "RestartESP";
+          button.textContent = '⏻ Restart ESP';
           button.disabled = false;
-          button.style.pointerEvents = 'auto';
-          isRestarting = false;  // allow next request
-        }, 2000);
+          isRestarting = false;
+        }, 2500);
       }
     }
-
   </script>
 </head>
 
 <body>
-  <h1 style="align-self: center;" id="title1">Weatherstation</h1>
-  <h2 style="align-self: center;" id="title2"></h2>
-  <h3 style="align-self: center;" id="title3"></h3>
-  <form id="myForm" onsubmit="return false;">
-    <div>
 
-      <label for="wifi_ssid_dropdown">Scan WiFi:</label>
-      <div style="width: 100%; display: flex;" id="dropdowndiv">
-        <input type="button" id="updateDropdownBtn" value="Update" onclick="updateSSIDDropdown()">
-        <select name="wifis" id="wifi_ssid_dropdown">
-          <option value="">Click button to update</option>
+  <!-- Theme switcher -->
+  <div class="theme-bar">
+    <span class="theme-bar-label">Theme</span>
+    <button class="theme-btn active" data-t="dark"     title="Dark"     onclick="applyTheme('dark')"></button>
+    <button class="theme-btn"        data-t="light"    title="Light"    onclick="applyTheme('light')"></button>
+    <button class="theme-btn"        data-t="terminal" title="Terminal" onclick="applyTheme('terminal')"></button>
+    <button class="theme-btn"        data-t="amber"    title="Amber"    onclick="applyTheme('amber')"></button>
+  </div>
+
+  <header class="site-header">
+    <h1 id="title1">Weatherstation</h1>
+    <p id="title2"></p>
+    <p id="title3"></p>
+  </header>
+
+  <main class="main-card">
+
+    <div class="section">
+      <div class="section-title">WiFi Network</div>
+      <div class="wifi-row">
+        <button class="btn-scan" id="updateDropdownBtn" onclick="updateSSIDDropdown()">Scan</button>
+        <select name="wifis" id="wifi_ssid_dropdown" onchange="updateSSIDClick()">
+          <option value="">Click Scan to discover networks</option>
         </select>
       </div>
-
-      <div id="fields1" style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
-
-      </div>
-      
-      <br>
-
-
-
-      <br>
-
-      <input id="SubmitBtn" type="button" value="Submit" onclick="sendData()">
-
     </div>
 
-    <br>
-    <input id="refreshBtn" type="button" value="Restore current values" onclick="makeFirstFieldBlock()"
-      style="float: right; width: 40%; font-size: x-large;  color: rgb(153, 109, 51);">
+    <div class="divider"></div>
 
-    <a style="float: left;width: 40%" href="currentConfig">
-      <input id="configBtn" type="button" value="Current config"
-        style="float: left; width: 100%; font-size: x-large;  color: green;">
-    </a>
-    <input id="restartBtn" type="button" value="RestartESP" onclick="restartESP()"
-      style="float: right; width: 40%; font-size: x-large;  color: rebeccapurple;">
+    <div class="section">
+      <div class="section-title">Device Configuration</div>
+      <div id="fields1"></div>
+    </div>
 
-    
+    <div class="divider"></div>
 
-  </form>
-  <footer style="text-align: center;width: 80%; padding: 5px; margin: 3em;">
-    <hr>
-    <div id="footerText">Device loading</div>
-    <p>ESP32/ESP8266 Weatherstation made by <a href="https://github.com/Nikpesu/WeatherStation" target="_blank">Nikolica</a></p>
-    
+    <button class="btn-submit" id="SubmitBtn" onclick="sendData()">Save Configuration</button>
+
+    <div class="action-row">
+      <button class="btn-restore" id="refreshBtn" onclick="makeFirstFieldBlock()">↺ Restore</button>
+      <a href="currentConfig" style="flex:1; text-decoration:none;">
+        <button class="btn-config">⎘ Current Config</button>
+      </a>
+      <button class="btn-restart" id="restartBtn" onclick="restartESP()">⏻ Restart ESP</button>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="footer-card">
+      <div class="footer-card-title">Device Info</div>
+      <div id="footerText">Loading device information…</div>
+    </div>
+
+    <div class="footer-card">
+      <div class="footer-card-title">Firmware Feature Support</div>
+      <div class="feature-grid" id="featureList">
+        <span class="feature-item"><span class="feat-dot">●</span>Loading…</span>
+      </div>
+    </div>
+
+    <p class="footer-credit">
+      ESP32/ESP8266 Weatherstation by
+      <a href="https://github.com/Nikpesu/WeatherStation" target="_blank">Nikolica</a>
+    </p>
   </footer>
+
 </body>
 <script>
-
-
+  initTheme();
+  renderFeatureList();
   makeFirstFieldBlock();
 </script>
-
 </html>
