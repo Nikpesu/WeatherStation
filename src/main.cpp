@@ -1,5 +1,6 @@
 #if defined(ESP8266) || defined(ESP32)
   #include "./WS_config.h"
+  #include "./WS_leds.h"
   #include "./WS_mqtt.h"
   #include "./WS_sensors.h"
   #include "./WS_network.h"

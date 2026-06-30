@@ -35,9 +35,10 @@ void startProgram()
   else
   { 
     Serial.println("["+runningTime()+"] Connection using Wi-Fi");
-    wifiConnectionType=true;  
+    wifiConnectionType=true;
     wifiStart();
     mqttConnect();
+    btHciBridgeBegin(6789);
     sensorsBegin();
   }
 
@@ -70,9 +71,14 @@ void loopedProgram()
 
 
     //refreshing sensors, connecting to wifi if disconnected, looping http services and dns loop
-    if (WiFi.status() != WL_CONNECTED) wifiStart();
+    if (WiFi.status() != WL_CONNECTED) { wifiStart(); mqttConnect(); sensorsBegin(); }
+
+    //mesh roaming: periodically hop to a stronger AP with the same SSID
+    if (millis() - lastRoamCheck > ROAM_CHECK_INTERVAL) { lastRoamCheck = millis(); wifiRoamCheck(); }
+
     client.loop();
     sensorLoop();
+    ledsUpdate();
 
     #if defined(ESP8266)
       MDNS.update();
@@ -85,7 +91,7 @@ void loopedProgram()
     //delay and delay calculation
     timeTook=millis()-timeStart;
     timeStart=LOOP_TIME-timeTook;
-    delay(timeStart>0 ? timeStart : 0);
+    delay(timeStart>MIN_LOOP_DELAY ? timeStart : MIN_LOOP_DELAY);
 
     //some sensors read/refresh data
     if(counter>=1000)
@@ -105,8 +111,8 @@ void loopedProgram()
 
     //delay and delay calculation
     timeTook=millis()-timeStart;
-    timeStart= 10-timeTook;
-    delay(timeStart>0 ? timeStart : 0);
+    timeStart= HOTSPOT_LOOP_TIME-timeTook;
+    delay(timeStart>MIN_LOOP_DELAY ? timeStart : MIN_LOOP_DELAY);
   }
 
   //update counters

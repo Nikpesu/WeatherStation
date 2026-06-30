@@ -8,6 +8,7 @@
 #include <HardwareSerial.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include <Preferences.h>
 #elif defined(ESP8266)
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
@@ -15,13 +16,22 @@
 #include <PString.h> 
 #include <SoftwareSerial.h> 
 #endif
+#include "bt_hci_bridge.h"
 #include <LittleFS.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
 #include <Streaming.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
+#include <Crypto.h>
+#include <AES.h>
+#include <CTR.h>
+#include <SHA256.h>
+#if defined(ESP32)
+#include <esp_system.h>
+#endif
 #include <Adafruit_BMP280.h>
+#include <SparkFun_BMP581_Arduino_Library.h>
 #include <Adafruit_SGP30.h>
 #include <Adafruit_SHT31.h>
 #include <PM1006K.h>
@@ -29,8 +39,9 @@
 #include "SparkFun_ENS160.h"
 #include <AHTxx.h> 
 #include <SensirionI2cSps30.h>
-#include "SparkFun_SCD4x_Arduino_Library.h" 
-#include <PMserial.h> 
+#include "SparkFun_SCD4x_Arduino_Library.h"
+#include <PMserial.h>
+#include <Adafruit_NeoPixel.h>
 #include <deque>
 
 //#include <PString.h>
@@ -62,6 +73,7 @@
   #define LOWPOWERMODE_TOGGLE false
   #define AHT2X_TOGGLE false
   #define BMP280_TOGGLE false
+  #define BMP580_TOGGLE false
   #define ENS160_TOGGLE false
   #define PM1006K_TOGGLE false
   #define PMSX003_TOGGLE false
@@ -71,10 +83,27 @@
   #define SPS30_TOGGLE false
 #endif
 
+// Default for sensors added after a user's secrets.h was written, so an existing
+// secrets.h without this key still compiles.
+#ifndef BMP580_TOGGLE
+  #define BMP580_TOGGLE false
+#endif
+
 //device
 #define device ARDUINO_BOARD
 
-#if defined(SEEED_XIAO_ESP32C3)
+#if defined(SEEED_XIAO_ESP32S3)
+  #define SDA_PIN D4
+  #define SCL_PIN D5
+  #define PM1006K_TX_PIN D9
+  #define PM1006K_RX_PIN D8
+  #define PMSX003_RX_PIN D7
+  #define PMSX003_TX_PIN D6
+  #define RESET_CONFIG_PIN D0
+  #define HOTSPOT_PIN D1
+  #define FAN_PIN -1
+  #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
+#elif defined(SEEED_XIAO_ESP32C3)
   #define SDA_PIN D4
   #define SCL_PIN D5
   #define PM1006K_TX_PIN D9
@@ -106,17 +135,6 @@
   #define RESET_CONFIG_PIN D0
   #define HOTSPOT_PIN D1
   #define FAN_PIN D2
-  #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
-#elif defined(SEEED_XIAO_ESP32S3)
-  #define SDA_PIN D4
-  #define SCL_PIN D5
-  #define PM1006K_TX_PIN D9
-  #define PM1006K_RX_PIN D8
-  #define PMSX003_RX_PIN D7
-  #define PMSX003_TX_PIN D6
-  #define RESET_CONFIG_PIN D0
-  #define HOTSPOT_PIN D1
-  #define FAN_PIN __dead2
   #define BOARDIMGLINK "https://wdcdn.qpic.cn/MTY4ODg1Nzc0ODUwMjM3NA_318648_dMoXitoaQiq2N3-a_1711678067?w=1486&h=1228"
 #elif defined(ESP32DOIT_DEVKIT_V1)
   #define SDA_PIN 21
@@ -175,6 +193,83 @@
   #define BOARDIMGLINK "https://i0.wp.com/randomnerdtutorials.com/wp-content/uploads/2019/05/ESP8266-NodeMCU-kit-12-E-pinout-gpio-pin.png?resize=817%2C542&quality=100&strip=all&ssl=1"
 #endif
 
+// ─── Sensor status-indicator LEDs (WS2812 / NeoPixel) ───
+// A short addressable strip whose LEDs mirror the health of the enabled sensors:
+// one LED per enabled sensor (in sensor order), green = sensor is producing valid
+// data, red = enabled but no data yet / not responding, off = unused slot. The
+// whole feature is toggled on the website, and the data pin is user-configurable
+// (defaults to D8 on the XIAO boards). Note: D8 is also the default PM1006K/PMSx003
+// RX pin, so move the LED pin if you run a particulate sensor.
+#ifndef LED_PIN
+  #if defined(SEEED_XIAO_ESP32C6) || defined(SEEED_XIAO_ESP32C3) || defined(SEEED_XIAO_ESP32S3)
+    #define LED_PIN D8
+  #else
+    #define LED_PIN 8
+  #endif
+#endif
+#ifndef LED_INDICATOR_TOGGLE
+  #define LED_INDICATOR_TOGGLE false
+#endif
+#define LED_COUNT 5            // default number of active LEDs on the strip
+#define LED_MAX_COUNT 16       // capacity: most LEDs the user can configure
+#define LED_BRIGHTNESS 40      // 0-255, fixed brightness when auto-brightness is off
+#define LED_BRIGHTNESS_MIN 2   // 0-255, dimmest the LEDs go in the dark (auto mode)
+#define LED_BRIGHTNESS_MAX 150 // 0-255, brightest the LEDs go in daylight (auto mode)
+
+// Ambient-light (LDR) auto-brightness. The LDR forms a divider with the on-board
+// 10k pull-up to 3.3V (LDR to GND), read on an ADC-capable pin. Brighter ambient
+// -> lower ADC reading -> brighter LEDs; darker -> dimmer, so they don't glare at
+// night. Default pin D0. NOTE: D0 is also RESET_CONFIG_PIN on the XIAO boards —
+// move one of them if you use both.
+#ifndef LDR_PIN
+  #if defined(SEEED_XIAO_ESP32C6) || defined(SEEED_XIAO_ESP32C3) || defined(SEEED_XIAO_ESP32S3)
+    #define LDR_PIN D0
+  #else
+    #define LDR_PIN 0
+  #endif
+#endif
+#ifndef LDR_BRIGHTNESS_TOGGLE
+  #define LDR_BRIGHTNESS_TOGGLE false
+#endif
+#define LDR_ADC_MAX 4095 // 12-bit ADC full-scale (ESP32 analogRead default)
+
+// Board "Dx" pin-name -> GPIO number lookup, so pins can be entered either as a
+// raw GPIO number or as the silkscreen "Dx" label (resolved by pinFromString()).
+#if defined(SEEED_XIAO_ESP32C3) || defined(SEEED_XIAO_ESP32C6) || defined(SEEED_XIAO_ESP32S3)
+  #define DPIN_COUNT 11
+  static const int kDPinMap[DPIN_COUNT] = { D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10 };
+#elif defined(D1_MINI) || defined(ESP8266)
+  #define DPIN_COUNT 9
+  static const int kDPinMap[DPIN_COUNT] = { D0,D1,D2,D3,D4,D5,D6,D7,D8 };
+#else
+  // Generic ESP32 boards don't reliably define Dx names; Dx input falls back to
+  // being parsed as a plain GPIO number.
+  #define DPIN_COUNT 0
+#endif
+
+// Resolve a pin entered as a number ("19") or a board label ("D8") to its GPIO
+// number. Unknown/blank input yields -1 (disabled).
+inline int pinFromString(const String &s)
+{
+  String t = s;
+  t.trim();
+  if (t.length() == 0) return -1;
+  if ((t[0] == 'D' || t[0] == 'd') && t.length() > 1)
+  {
+    bool digits = true;
+    for (unsigned int i = 1; i < t.length(); i++)
+      if (!isDigit(t[i])) { digits = false; break; }
+    if (digits)
+    {
+      int n = t.substring(1).toInt();
+#if DPIN_COUNT > 0
+      if (n >= 0 && n < DPIN_COUNT) return kDPinMap[n];
+#endif
+    }
+  }
+  return t.toInt();
+}
+
 //main
 void startProgram();
 void loopedProgram();
@@ -186,6 +281,17 @@ void loadConfig();
 bool saveConfig();
 void updateFieldsToNative();
 void updateFieldsToString();
+String exportConfig();
+bool importConfig(String jsonStr, String password);
+//auth (defined in json.h)
+String createSession();
+bool isAuthed();
+void clearCurrentSession();
+bool loadSetupDone();
+void saveSetupDone(bool done);
+//leds.h
+void ledsBegin();
+void ledsUpdate();
 //sensors.h
 void sensorLoop();
 void pm1006kRead();
@@ -202,10 +308,20 @@ String makeMqttSensorTopic(int i, String sensor, String status_topic, String dev
 //wifi.h
 String IpAddress2String(const IPAddress& ipAddress);
 String rssiToChart(int8_t);
+void connectToBestAP();
+void wifiRoamCheck();
 void apStart();
 void httpConfig();
 void httpData();
 void httpDefault();
+void httpExportConfig();
+void httpImportConfig();
+void httpStatus();
+void httpLedConfig();
+void httpLedConfigSet();
+void httpLogin();
+void httpLogout();
+void httpSetup();
 void httpfields();
 void httpHome();
 void httpRestart();
@@ -217,6 +333,21 @@ void httpWiFi();
 void wifiStart();
 
 
+// Minimum loop cycle time (ms) in hotspot/AP config mode. The captive portal
+// loop used to spin every ~10ms which kept the CPU busy and made the board run
+// hot; pacing it slower idles the CPU without hurting config responsiveness.
+const int HOTSPOT_LOOP_TIME = 50;
+// Guaranteed idle delay (ms) every loop, even when a cycle already overran its
+// target, so the CPU is never pegged at 0ms sleep.
+const int MIN_LOOP_DELAY = 5;
+
+// WiFi mesh roaming: among access points sharing the configured SSID, connect to
+// the one with the strongest signal, and re-check periodically. The device only
+// jumps to another AP when it is at least ROAM_RSSI_THRESHOLD dB stronger than
+// the current one (hysteresis to avoid flapping between similar APs).
+const int ROAM_RSSI_THRESHOLD = 10;                  // dB
+const unsigned long ROAM_CHECK_INTERVAL = 600000UL;  // 10 minutes (ms)
+
 // Set the size of the JSON object
 const int JSON_OBJECT_SIZE = 1536;
 
@@ -224,37 +355,124 @@ const int JSON_OBJECT_SIZE = 1536;
 const char *JSON_FILE_PATH = "/config.json";
 
 
-// Define the variables
-String wifi_ssid = WIFI_SSID;
-String wifi_pass = WIFI_PASS;
-String mqtt_server = MQTT_SERVER;
-int mqtt_port = MQTT_PORT;
-String mqtt_user = MQTT_USER;
-String mqtt_password = MQTT_PASSWORD;
-String mqtt_messageRoot = MQTT_MESSAGEROOT;
-String mdns_hostname = MDNS_HOSTNAME;
-String hotspot_ssid = HOTSPOT_SSID;
-String hotspot_pass = HOTSPOT_PASS;
-bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
-int refreshTime=REFRESH_TIME; 
-String suggested_area=SUGGESTED_AREA; 
+// All user-configurable settings live in one structure so the whole config can
+// be loaded, saved, exported and imported as a single object. The config is
+// loaded from JSON into this struct (see loadConfig/importConfig in WS_json.h).
+struct WSConfig {
+  // fields
+  String wifi_ssid = WIFI_SSID;
+  String wifi_pass = WIFI_PASS;
+  String mqtt_server = MQTT_SERVER;
+  int mqtt_port = MQTT_PORT;
+  String mqtt_user = MQTT_USER;
+  String mqtt_password = MQTT_PASSWORD;
+  String mqtt_messageRoot = MQTT_MESSAGEROOT;
+  String mdns_hostname = MDNS_HOSTNAME;
+  String hotspot_ssid = HOTSPOT_SSID;
+  String hotspot_pass = HOTSPOT_PASS;
+  bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
+  int refreshTime = REFRESH_TIME;
+  String suggested_area = SUGGESTED_AREA;
 
+  // sensor status-indicator LEDs (WS2812)
+  bool led_toggle = LED_INDICATOR_TOGGLE;
+  // ambient-light auto-brightness via LDR
+  bool ldr_brightness_toggle = LDR_BRIGHTNESS_TOGGLE;
+  // number of active LEDs (1..LED_MAX_COUNT), editable in the LED popup.
+  int led_count = LED_COUNT;
+  // which sensor each LED shows (value = sensor index 0..SENSOR_COUNT-1, -1 = off).
+  // Default: LED i -> sensor i (then "none"). Arrays are sized to LED_MAX_COUNT;
+  // entries past led_count are unused. Keep initialiser length == LED_MAX_COUNT.
+  int led_map[LED_MAX_COUNT]    = {0,1,2,3,4,5,6,7,8,-1,-1,-1,-1,-1,-1,-1};
+  // Per-LED colour scale: led_red/led_yellow/led_green are the three step VALUES
+  // (step 1/2/3 thresholds). The live reading is interpolated between the step
+  // colours below as it moves across these value points. Set in the LED popup.
+  float led_red[LED_MAX_COUNT]    = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  float led_yellow[LED_MAX_COUNT] = {50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50};
+  float led_green[LED_MAX_COUNT]  = {100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100};
+  // Per-LED, per-step colours (packed 0xRRGGBB). Defaults: step1 red, step2
+  // yellow, step3 green — but each is a colour picker in the popup.
+  uint32_t led_col1[LED_MAX_COUNT] = {0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935};
+  uint32_t led_col2[LED_MAX_COUNT] = {0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825};
+  uint32_t led_col3[LED_MAX_COUNT] = {0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60};
+
+  // master password used to encrypt the sensitive fields at rest. Kept only in
+  // NVS (ESP32) / a key file (ESP8266), never written into /config.json. Empty
+  // is allowed: the config is still encrypted, just with an empty-derived key.
+  String config_password = "";
+
+  // sensor toggles
+  bool AHT2x_toggle = AHT2X_TOGGLE;
+  bool BMP280_toggle = BMP280_TOGGLE;
+  bool BMP580_toggle = BMP580_TOGGLE;
+  bool ENS160_toggle = ENS160_TOGGLE;
+  bool PM1006K_toggle = PM1006K_TOGGLE;
+  bool PMSx003_toggle = PMSX003_TOGGLE;
+  bool SCD4x_toggle = SCD4X_TOGGLE;
+  bool SGP30_toggle = SGP30_TOGGLE;
+  bool SHT31_toggle = SHT31_TOGGLE;
+  bool SPS30_toggle = SPS30_TOGGLE;
+
+  // pins
+  int sda_pin = SDA_PIN;
+  int scl_pin = SCL_PIN;
+  int PM1006K_RX_pin = PM1006K_RX_PIN;
+  int PM1006K_TX_pin = PM1006K_TX_PIN;
+  int PMSX003_RX_pin = PMSX003_RX_PIN;
+  int PMSX003_TX_pin = PMSX003_TX_PIN;
+  int RESET_CONFIG_pin = RESET_CONFIG_PIN;
+  int HOTSPOT_pin = HOTSPOT_PIN;
+  int FAN_pin = FAN_PIN;
+  int LED_pin = LED_PIN;
+  int LDR_pin = LDR_PIN;
+};
+
+// The single source of truth for the device configuration.
+WSConfig config;
+
+// Backwards-compatible aliases: existing code keeps using these names, but they
+// now refer directly to the members of `config`. Because they are references,
+// taking their address (used by the fields/toggles/pins pointer arrays below)
+// yields the address of the matching struct member, so loads write into `config`.
+String &wifi_ssid = config.wifi_ssid;
+String &wifi_pass = config.wifi_pass;
+String &mqtt_server = config.mqtt_server;
+int &mqtt_port = config.mqtt_port;
+String &mqtt_user = config.mqtt_user;
+String &mqtt_password = config.mqtt_password;
+String &mqtt_messageRoot = config.mqtt_messageRoot;
+String &mdns_hostname = config.mdns_hostname;
+String &hotspot_ssid = config.hotspot_ssid;
+String &hotspot_pass = config.hotspot_pass;
+bool &lowPowerMode_toggle = config.lowPowerMode_toggle;
+int &refreshTime = config.refreshTime;
+String &suggested_area = config.suggested_area;
+bool &led_toggle = config.led_toggle;
+bool &ldr_brightness_toggle = config.ldr_brightness_toggle;
+String &config_password = config.config_password;
+
+bool &AHT2x_toggle = config.AHT2x_toggle;
+bool &BMP280_toggle = config.BMP280_toggle;
+bool &BMP580_toggle = config.BMP580_toggle;
+bool &ENS160_toggle = config.ENS160_toggle;
+bool &PM1006K_toggle = config.PM1006K_toggle;
+bool &PMSx003_toggle = config.PMSx003_toggle;
+bool &SCD4x_toggle = config.SCD4x_toggle;
+bool &SGP30_toggle = config.SGP30_toggle;
+bool &SHT31_toggle = config.SHT31_toggle;
+bool &SPS30_toggle = config.SPS30_toggle;
+
+// UI mirror strings: the field pointer array holds String*, so the non-string
+// config values get a textual mirror here (kept in sync by updateFieldsTo*).
 String mqtt_port_str = String(mqtt_port);
 String lowPowerMode_toggle_str = String(lowPowerMode_toggle);
 String refreshTime_str = String(refreshTime);
-String test = "1"; 
+String test = "1";
 
-bool AHT2x_toggle = AHT2X_TOGGLE;
-bool BMP280_toggle = BMP280_TOGGLE;
-bool ENS160_toggle = ENS160_TOGGLE;
-bool PM1006K_toggle = PM1006K_TOGGLE;
-bool PMSx003_toggle = PMSX003_TOGGLE;
-bool SCD4x_toggle = SCD4X_TOGGLE;
-bool SGP30_toggle = SGP30_TOGGLE;
-bool SHT31_toggle = SHT31_TOGGLE;
-bool SPS30_toggle = SPS30_TOGGLE;
-
-#define FIELD_COUNT 13
+// NOTE: the LED toggles (led_toggle, ldr_brightness_toggle) and all other LED
+// settings are NOT in this list — they live entirely in the LED popup and are
+// persisted directly by buildConfigJson()/loadConfig().
+#define FIELD_COUNT 14
 String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"wifi_ssid", "Wifi SSID:", "text", "SSID"},
     {"wifi_pass", "Wifi Password:", "password", "password"},
@@ -268,7 +486,8 @@ String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"hotspot_pass", "Hotspot Password:", "password", "password"},
     {"lowPowerMode_toggle", "Low Power Mode (can only be configured in hotspot mode!!)", "checkbox", ""},
     {"refreshTime", "Refresh Time:", "number", "default: 30"},
-    {"suggested_area", "Suggested area:", "text", "for example: Outside, Inside, Bedroom..."}
+    {"suggested_area", "Suggested area:", "text", "for example: Outside, Inside, Bedroom..."},
+    {"config_password", "Config Password (encrypts stored secrets, leave blank for none):", "password", "password"}
 };
 String* fields[FIELD_COUNT] = {
     &wifi_ssid,
@@ -283,10 +502,11 @@ String* fields[FIELD_COUNT] = {
     &hotspot_pass,
     &lowPowerMode_toggle_str,
     &refreshTime_str,
-    &suggested_area
+    &suggested_area,
+    &config_password
 };
 
-#define SENSOR_COUNT 9
+#define SENSOR_COUNT 10
 String toggleIDName[SENSOR_COUNT][2] = {
     {"AHT2x_toggle", "AHT2x"},
     {"BMP280_toggle", "BMP280"},
@@ -296,7 +516,8 @@ String toggleIDName[SENSOR_COUNT][2] = {
     {"SCD4x_toggle", "SCD4x"},
     {"SGP30_toggle", "SGP30"},
     {"SHT31_toggle", "SHT31"},
-    {"SPS30_toggle", "SPS30"}
+    {"SPS30_toggle", "SPS30"},
+    {"BMP580_toggle", "BMP580"}
 };
 bool* toggles[SENSOR_COUNT] = {
     &AHT2x_toggle,
@@ -307,20 +528,23 @@ bool* toggles[SENSOR_COUNT] = {
     &SCD4x_toggle,
     &SGP30_toggle,
     &SHT31_toggle,
-    &SPS30_toggle
+    &SPS30_toggle,
+    &BMP580_toggle
 };
 
-int sda_pin=SDA_PIN;
-int scl_pin=SCL_PIN;
-int PM1006K_RX_pin=PM1006K_RX_PIN;
-int PM1006K_TX_pin=PM1006K_TX_PIN;//RX / GPIO3 TX / GPIO0
-int PMSX003_RX_pin=PMSX003_RX_PIN;
-int PMSX003_TX_pin=PMSX003_TX_PIN;
-int RESET_CONFIG_pin=RESET_CONFIG_PIN;
-int HOTSPOT_pin=HOTSPOT_PIN;
-int FAN_pin=FAN_PIN;
+int &sda_pin = config.sda_pin;
+int &scl_pin = config.scl_pin;
+int &PM1006K_RX_pin = config.PM1006K_RX_pin;
+int &PM1006K_TX_pin = config.PM1006K_TX_pin;//RX / GPIO3 TX / GPIO0
+int &PMSX003_RX_pin = config.PMSX003_RX_pin;
+int &PMSX003_TX_pin = config.PMSX003_TX_pin;
+int &RESET_CONFIG_pin = config.RESET_CONFIG_pin;
+int &HOTSPOT_pin = config.HOTSPOT_pin;
+int &FAN_pin = config.FAN_pin;
+int &LED_pin = config.LED_pin;
+int &LDR_pin = config.LDR_pin;
 
-#define PINS_COUNT 9
+#define PINS_COUNT 11
 String pinIDName[PINS_COUNT][2] = {
     {"sda_pin", "SDA"},
     {"scl_pin", "SCL"},
@@ -330,7 +554,9 @@ String pinIDName[PINS_COUNT][2] = {
     {"PMSX003_TX_pin", "PMSX003 TX"},
     {"RESET_CONFIG_pin", "RESET CONFIG"},
     {"HOTSPOT_pin", "HOTSPOT"},
-    {"FAN_pin", "FAN"}
+    {"FAN_pin", "FAN"},
+    {"LED_pin", "Status LEDs (WS2812)"},
+    {"LDR_pin", "LDR (auto brightness)"}
 };
 int* pins[PINS_COUNT] = {
     &sda_pin,
@@ -341,7 +567,9 @@ int* pins[PINS_COUNT] = {
     &PMSX003_TX_pin,
     &RESET_CONFIG_pin,
     &HOTSPOT_pin,
-    &FAN_pin
+    &FAN_pin,
+    &LED_pin,
+    &LDR_pin
 };
 
 
@@ -353,11 +581,22 @@ bool wifiConnectionType; //0 hotspot, 1 wifi
 bool reconfigure=0;
 bool runningTasks=1;
 bool sensorStart=1;
+unsigned long lastRoamCheck=0; //millis of the last mesh roaming check
+
+// Web-UI authentication state. The login password is the same as the config
+// encryption password (config_password). When it is empty the site is open.
+// Sessions are random tokens handed out on login and checked via a cookie;
+// they live only in RAM, so a reboot logs everyone out.
+#define MAX_SESSIONS 4
+String sessions[MAX_SESSIONS];
+int sessionWriteIdx = 0;
+bool setupDone = false; //becomes true once first-run setup (password/import) is done
 
 //taskid_t AHT2x_task, BMP280_task, ENS160_task, PM1006K_task, PMSx003_task, SCD4x_task, SGP30_task, SHT31_task, SPS30_task;
 
 float aht2x_temp=nan(""), aht2x_hum=nan("");
 float bmp280_temp=nan(""), bmp280_press=nan(""), bmp280_alt=nan("");
+float bmp580_temp=nan(""), bmp580_press=nan(""), bmp580_alt=nan("");
 float ens160_eco2=nan(""), ens160_tvoc=nan(""), ens160_aqi=nan("");
 float pm1006k_pm1_0 = nan(""), pm1006k_pm2_5 = nan(""), pm1006k_pm10_0 = nan("");
 float pmsx003_pm1_0 = nan(""), pmsx003_pm2_5 = nan(""), pmsx003_pm10_0 = nan(""), pmsx003_temp = nan(""), pmsx003_hum = nan(""), pmsx003_hcho = nan("");
@@ -382,7 +621,7 @@ String infoString="log available after about 10s";
 
 // Define the JSON document size
 // StaticJsonDocument<1024> doc;
-DynamicJsonDocument doc(JSON_OBJECT_SIZE);
+JsonDocument doc;
 
 const IPAddress apIp(192, 168, 0, 1);
 DNSServer dnsServer;
@@ -397,6 +636,7 @@ PubSubClient client(espClient);
 
 Adafruit_SGP30 sgp30;
 Adafruit_BMP280 bmp280;
+BMP581 bmp580;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SparkFun_ENS160 myENS; 
 AHTxx aht2x(AHTXX_ADDRESS_X38, AHT2x_SENSOR);
@@ -411,6 +651,12 @@ PM1006K * pm1006k;
 
 PMS pmsx003Type=PMS5003;
 SerialPM pmsx003(pmsx003Type, PMSX003_RX_pin, PMSX003_TX_pin); // PMSx003, RX, TX
+
+// Status-indicator LED strip. The data pin is applied at runtime in ledsBegin()
+// from the (user-configurable) config.LED_pin, so the compile-time LED_PIN here
+// is only a placeholder default. Allocated for the maximum count; the active
+// length is set to config.led_count in ledsBegin().
+Adafruit_NeoPixel leds(LED_MAX_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 
 String htmlStart="<!DOCTYPE html> \

@@ -495,6 +495,58 @@
       font-size: 0.95rem;
     }
 
+    .pin select {
+      min-width: 7rem;
+      padding: 0.4rem 0.3rem;
+      font-size: 0.9rem;
+    }
+
+    /* ── Sensor LED colour modal ── */
+    .ledcolor-hint { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 1rem; }
+    .ledcolor-row {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      margin-bottom: 0.7rem;
+    }
+    .ledcolor-head {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.9rem; margin-bottom: 0.5rem;
+    }
+    .ledcolor-name { color: var(--accent); font-weight: bold; }
+    .ledcolor-live { margin-left: auto; color: var(--text-dim); font-size: 0.8rem; }
+    .ledcolor-bar {
+      height: 14px; border-radius: 7px; border: 1px solid var(--border);
+      background: linear-gradient(to right, #e53935 0%, #f9a825 50%, #27ae60 100%);
+      margin-bottom: 0.5rem;
+    }
+    .ledcolor-inputs {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr auto 1fr;
+      align-items: center; gap: 0.35rem 0.5rem;
+    }
+    .ledcolor-inputs input[type="number"] {
+      width: 100%; min-width: 3.5rem; text-align: center;
+      padding: 0.35rem 0.3rem; font-size: 0.9rem;
+    }
+    .ledcolor-inputs input[type="color"] {
+      width: 1.9rem; height: 1.9rem; padding: 0; cursor: pointer;
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    }
+    /* LED popup top controls (toggles + count) */
+    .led-top {
+      display: flex; flex-direction: column; gap: 0.6rem;
+      padding-bottom: 0.9rem; margin-bottom: 0.9rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .led-check { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; cursor: pointer; }
+    .led-count { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; }
+    .led-count input { width: 5rem; text-align: center; padding: 0.4rem; font-size: 0.95rem; }
+    .led-sel { flex: 1; min-width: 5rem; }
+    .ledcolor-head { flex-wrap: wrap; }
+    .ledcolor-head select { padding: 0.35rem 0.5rem; font-size: 0.88rem; }
+
     /* ── Footer ── */
     footer {
       width: 100%;
@@ -601,6 +653,74 @@
       pointer-events: none;
       z-index: 9999;
     }
+
+    /* ══════════════════════════════════════
+       AUTH OVERLAY & CONFIG MODAL
+    ══════════════════════════════════════ */
+    /* Inline gate that replaces the config card while keeping the header,
+       theme switcher and footer visible. */
+    .auth-gate {
+      width: 100%; max-width: 640px;
+      display: flex; justify-content: center;
+    }
+    .auth-gate[hidden] { display: none; }
+
+    .auth-card {
+      width: 100%; max-width: 420px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow);
+      padding: 1.6rem; display: flex; flex-direction: column; gap: 0.9rem;
+      animation: fadeUp 0.35s ease both;
+    }
+    .auth-card[hidden] { display: none; }
+    .auth-card h2 {
+      font-family: 'Share Tech Mono', monospace; color: var(--accent);
+      font-size: 1.2rem; letter-spacing: 0.06em; text-align: center;
+    }
+    .auth-card p { color: var(--text-dim); font-size: 0.85rem; text-align: center; line-height: 1.5; }
+    .auth-label {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.72rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim);
+    }
+    .auth-msg { min-height: 1.1rem; font-size: 0.8rem; text-align: center; font-family: 'Share Tech Mono', monospace; }
+    .auth-msg.err { color: var(--danger); }
+    .auth-msg.ok  { color: var(--accent2); }
+    .auth-sep {
+      display: flex; align-items: center; gap: 0.6rem;
+      color: var(--text-dim); font-size: 0.72rem;
+      font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .auth-sep::before, .auth-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .modal {
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal[hidden] { display: none; }
+    .modal-card {
+      width: 100%; max-width: 720px; height: 85vh;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow);
+      display: flex; flex-direction: column; overflow: hidden;
+      animation: fadeUp 0.3s ease both;
+    }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--border);
+    }
+    .modal-head .section-title { border: none; padding: 0; }
+    .modal-close {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 8px; width: 2rem; height: 2rem; cursor: pointer; font-size: 1rem; padding: 0;
+    }
+    .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+    .modal-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .modal-body iframe { width: 100%; flex: 1; min-height: 0; border: none; background: var(--bg); }
+    .modal-actions {
+      display: flex; gap: 0.6rem; padding: 0.9rem 1.1rem;
+      border-top: 1px solid var(--border); flex-wrap: wrap;
+    }
   </style>
 
   <script defer async>
@@ -627,16 +747,21 @@
     let isMaking = 0;
     let isFetching = 0;
     let firstRun = 1;
+    let appStarted = 0;
+    let pendingImport = null;     // text of a config file awaiting its password
 
     /* ── Feature tracking ── */
     const features = {
       '/fields':  { label: 'Config fields', status: null },
       '/sensors': { label: 'Sensors',       status: null },
       '/pins':    { label: 'Pin config',    status: null },
+      '/ledConfig': { label: 'LED settings',  status: null },
       '/titles':  { label: 'Live titles',   status: null },
       '/wifi':    { label: 'WiFi scan',     status: null },
       '/data':    { label: 'Save config',   status: null },
       '/restart': { label: 'Restart ESP',   status: null },
+      '/exportConfig': { label: 'Export config', status: null },
+      '/importConfig': { label: 'Import config', status: null },
     };
 
     function updateFeatureStatus(endpoint, ok) {
@@ -767,7 +892,8 @@
           if (data[i].fieldID === "mdns_hostname")
             html +=
               `<label for="sensors">Sensors</label><div id="sensors" class="senzori"></div>` +
-              (pinsHtml ? `<label for="pins">Pins</label><div id="pins" class="pinovi"></div>` : '');
+              (pinsHtml ? `<label for="pins">Pins</label><div id="pins" class="pinovi"></div>` : '') +
+              `<button type="button" class="btn-config" style="margin-top:0.8rem" onclick="openLedColorModal()">🚦 Sensor status LEDs</button>`;
         }
         document.getElementById('fields1').innerHTML = html;
         document.getElementById('sensors').innerHTML = buttonHtml;
@@ -779,11 +905,6 @@
         updateFeatureStatus('/fields', false);
       }
 
-      try { await fetchTitles(); }
-      catch (e) { console.warn('/titles:', e.message); }
-
-      if (firstRun) setInterval(fetchTitles, 1000);
-      firstRun = 0;
       renderFeatureList();
     }
 
@@ -855,6 +976,344 @@
       }
     }
 
+    async function exportConfig() {
+      const button = document.getElementById('exportBtn');
+      const originalText = button.textContent;
+      button.disabled = true;
+      try {
+        const response = await fetch('/exportConfig');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const text = await response.text();
+        const blob = new Blob([text], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'weatherstation_config.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        button.textContent = '✓ Exported';
+        updateFeatureStatus('/exportConfig', true);
+      } catch (e) {
+        console.warn('/exportConfig:', e.message);
+        button.textContent = 'Error';
+        updateFeatureStatus('/exportConfig', false);
+      } finally {
+        setTimeout(() => { button.textContent = originalText; button.disabled = false; }, 2500);
+      }
+    }
+
+    /* ── Auth gate (inline: header, theme switcher and footer stay visible) ── */
+    function showGate(panel) {
+      document.getElementById('mainCard').hidden = true;
+      document.getElementById('authGate').hidden = false;
+      document.getElementById('setupPanel').hidden = (panel !== 'setupPanel');
+      document.getElementById('loginPanel').hidden = (panel !== 'loginPanel');
+    }
+
+    async function checkAuth() {
+      let s;
+      try { s = await fetchJSON('/status'); }
+      catch (e) { console.warn('/status:', e.message); enterApp(null); return; }
+      if (s.needsSetup) { showGate('setupPanel'); return; }
+      if (s.authRequired && !s.authenticated) { showGate('loginPanel'); return; }
+      enterApp(s);
+    }
+
+    function enterApp(s) {
+      document.getElementById('authGate').hidden = true;
+      document.getElementById('mainCard').hidden = false;
+      const lr = document.getElementById('logoutRow');
+      if (lr) lr.hidden = !(s && s.authRequired);
+      if (!appStarted) { appStarted = 1; makeFirstFieldBlock(); }
+    }
+
+    async function doLogin() {
+      const msg = document.getElementById('loginMsg');
+      msg.className = 'auth-msg'; msg.textContent = 'Checking…';
+      const pass = document.getElementById('loginPass').value;
+      try {
+        await fetchJSON('/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        });
+        msg.className = 'auth-msg ok'; msg.textContent = 'Welcome!';
+        const s = await fetchJSON('/status');
+        enterApp(s);
+      } catch (e) {
+        msg.className = 'auth-msg err'; msg.textContent = 'Wrong password';
+      }
+    }
+
+    async function doSetup() {
+      const msg = document.getElementById('setupMsg');
+      msg.className = 'auth-msg'; msg.textContent = 'Saving…';
+      const pass = document.getElementById('setupPass').value;
+      try {
+        await fetchJSON('/setup', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pass })
+        });
+        const s = await fetchJSON('/status');
+        enterApp(s);
+      } catch (e) {
+        msg.className = 'auth-msg err'; msg.textContent = 'Setup failed';
+      }
+    }
+
+    async function doLogout() {
+      try { await fetch('/logout', { method: 'POST' }); } catch (e) {}
+      location.reload();
+    }
+
+    /* ── Current-config modal ── */
+    function openConfigModal() {
+      const f = document.getElementById('configFrame');
+      f.src = '/currentConfig?t=' + Date.now(); // cache-bust + show latest values
+      document.getElementById('configModal').hidden = false;
+    }
+    function closeConfigModal() { document.getElementById('configModal').hidden = true; }
+
+    /* ── Sensor status LED settings popup (all LED config lives here) ── */
+    let ledState = { count: 5, maxCount: 16, sensors: [], measures: [], leds: [] };
+
+    // Default step values + colours per measurement TYPE (the `key` from the
+    // firmware measurement catalogue). Applied to a row when a part is picked.
+    const LED_DEFAULTS = {
+      temp:  { v: [0, 25, 40],       c: ['#2196f3', '#27ae60', '#e53935'] },
+      hum:   { v: [20, 50, 80],      c: ['#e5a23a', '#27ae60', '#2196f3'] },
+      co2:   { v: [400, 1000, 1500], c: ['#27ae60', '#f9a825', '#e53935'] },
+      tvoc:  { v: [0, 220, 660],     c: ['#27ae60', '#f9a825', '#e53935'] },
+      pm:    { v: [0, 35, 75],       c: ['#27ae60', '#f9a825', '#e53935'] },
+      aqi:   { v: [1, 3, 5],         c: ['#27ae60', '#f9a825', '#e53935'] },
+      press: { v: [980, 1013, 1040], c: ['#2196f3', '#27ae60', '#e53935'] },
+      alt:   { v: [0, 500, 1500],    c: ['#27ae60', '#f9a825', '#e53935'] },
+      hcho:  { v: [0, 0.05, 0.1],    c: ['#27ae60', '#f9a825', '#e53935'] },
+      raw:   { v: [0, 25000, 50000], c: ['#27ae60', '#f9a825', '#e53935'] }
+    };
+    const LED_FALLBACK = { map: -1, red: 0, yellow: 50, green: 100, col1: '#e53935', col2: '#f9a825', col3: '#27ae60', value: null };
+
+    // Live enabled state: prefer the actual Sensors checkbox on the page (so
+    // toggling a sensor immediately affects the LED mapping), fall back to the
+    // saved state from /ledConfig.
+    function sensorEnabled(s) {
+      const cb = s && s.id ? document.getElementById(s.id) : null;
+      return cb ? cb.checked : !!(s && s.enabled);
+    }
+    function measuresForSensor(sensorIdx) {
+      return ledState.measures.filter(m => m.sensor === sensorIdx);
+    }
+    // The sensor a measurement belongs to, but only if that sensor is enabled.
+    function mapSensor(map) {
+      if (map < 0) return -1;
+      const me = ledState.measures.find(x => x.idx === map);
+      if (!me) return -1;
+      const s = ledState.sensors.find(x => x.idx === me.sensor);
+      return (s && sensorEnabled(s)) ? me.sensor : -1;
+    }
+
+    function sensorOptionsHtml(curSensor) {
+      let opts = `<option value="-1"${curSensor === -1 ? ' selected' : ''}>— none —</option>`;
+      for (const s of ledState.sensors) {
+        if (!sensorEnabled(s)) continue; // only enabled sensors are assignable
+        opts += `<option value="${s.idx}"${s.idx === curSensor ? ' selected' : ''}>${s.name}</option>`;
+      }
+      return opts;
+    }
+    function partOptionsHtml(sensorIdx, curMap) {
+      if (sensorIdx < 0) return `<option value="-1">—</option>`;
+      return measuresForSensor(sensorIdx)
+        .map(m => `<option value="${m.idx}"${m.idx === curMap ? ' selected' : ''}>${m.label}</option>`)
+        .join('');
+    }
+
+    function renderLedRows() {
+      let html = '';
+      for (let i = 0; i < ledState.count; i++) {
+        const L = Object.assign({}, LED_FALLBACK, ledState.leds[i] || {});
+        const live = (L.value === null || L.value === undefined) ? '—' : L.value;
+        const sensorIdx = mapSensor(L.map);          // -1 if none / sensor disabled
+        const map = sensorIdx < 0 ? -1 : L.map;
+        html +=
+          `<div class="ledcolor-row">` +
+            `<div class="ledcolor-head">LED ${i + 1} · ` +
+              `<select id="lc_sensor_${i}" class="led-sel" onchange="onLedSensorChange(${i})">${sensorOptionsHtml(sensorIdx)}</select>` +
+              `<select id="lc_part_${i}" class="led-sel" onchange="onLedPartChange(${i})"${sensorIdx < 0 ? ' disabled' : ''}>${partOptionsHtml(sensorIdx, map)}</select>` +
+              `<span class="ledcolor-live">live: ${live}</span></div>` +
+            `<div class="ledcolor-inputs">` +
+              `<input type="color" id="lc_col1_${i}" value="${L.col1}">` +
+              `<input type="number" step="any" id="lc_red_${i}" value="${L.red}">` +
+              `<input type="color" id="lc_col2_${i}" value="${L.col2}">` +
+              `<input type="number" step="any" id="lc_yellow_${i}" value="${L.yellow}">` +
+              `<input type="color" id="lc_col3_${i}" value="${L.col3}">` +
+              `<input type="number" step="any" id="lc_green_${i}" value="${L.green}">` +
+            `</div>` +
+          `</div>`;
+      }
+      document.getElementById('ledColorBody').innerHTML = html;
+    }
+
+    // Read the visible inputs back into ledState so edits survive a re-render.
+    function syncLedInputs() {
+      for (let i = 0; i < ledState.count; i++) {
+        const ss = document.getElementById(`lc_sensor_${i}`);
+        const r = document.getElementById(`lc_red_${i}`);
+        if (!ss || !r) continue;
+        const prev = ledState.leds[i] || {};
+        const sensorIdx = Number(ss.value);
+        const ps = document.getElementById(`lc_part_${i}`);
+        let map = (sensorIdx >= 0 && ps) ? Number(ps.value) : -1;
+        if (mapSensor(map) < 0) map = -1;
+        ledState.leds[i] = {
+          map,
+          red: Number(r.value),
+          yellow: Number(document.getElementById(`lc_yellow_${i}`).value),
+          green: Number(document.getElementById(`lc_green_${i}`).value),
+          col1: document.getElementById(`lc_col1_${i}`).value,
+          col2: document.getElementById(`lc_col2_${i}`).value,
+          col3: document.getElementById(`lc_col3_${i}`).value,
+          value: (prev.value !== undefined) ? prev.value : null
+        };
+      }
+    }
+
+    // Fill a row with the picked measurement's type defaults.
+    function applyMeasureDefaults(i, map) {
+      if (map < 0) return;
+      const me = ledState.measures.find(x => x.idx === map);
+      const def = me && LED_DEFAULTS[me.key];
+      if (def) Object.assign(ledState.leds[i], {
+        red: def.v[0], yellow: def.v[1], green: def.v[2],
+        col1: def.c[0], col2: def.c[1], col3: def.c[2]
+      });
+    }
+
+    // Picking a sensor selects its first measurement (part) by default.
+    function onLedSensorChange(i) {
+      syncLedInputs();
+      const sv = Number(document.getElementById(`lc_sensor_${i}`).value);
+      const list = sv >= 0 ? measuresForSensor(sv) : [];
+      const map = list.length ? list[0].idx : -1;
+      ledState.leds[i].map = map;
+      applyMeasureDefaults(i, map);
+      renderLedRows();
+    }
+    // Picking a part sets the exact measurement.
+    function onLedPartChange(i) {
+      syncLedInputs();
+      const map = Number(document.getElementById(`lc_part_${i}`).value);
+      ledState.leds[i].map = map;
+      applyMeasureDefaults(i, map);
+      renderLedRows();
+    }
+
+    function onLedCountChange() {
+      syncLedInputs();
+      let c = parseInt(document.getElementById('led_count_in').value, 10);
+      if (isNaN(c) || c < 1) c = 1;
+      if (c > ledState.maxCount) { c = ledState.maxCount; document.getElementById('led_count_in').value = c; }
+      for (let i = ledState.leds.length; i < c; i++)
+        ledState.leds[i] = Object.assign({}, LED_FALLBACK);
+      ledState.count = c;
+      renderLedRows();
+    }
+
+    async function openLedColorModal() {
+      const body = document.getElementById('ledColorBody');
+      const msg = document.getElementById('ledColorMsg');
+      msg.className = 'auth-msg'; msg.textContent = '';
+      body.innerHTML = 'Loading…';
+      document.getElementById('ledColorModal').hidden = false;
+      try {
+        const d = await fetchJSON('/ledConfig');
+        ledState = { count: d.count, maxCount: d.maxCount || 16, sensors: d.sensors || [], measures: d.measures || [], leds: d.leds || [] };
+        document.getElementById('led_toggle_cb').checked = !!d.led_toggle;
+        document.getElementById('ldr_toggle_cb').checked = !!d.ldr_toggle;
+        const ci = document.getElementById('led_count_in');
+        ci.max = ledState.maxCount; ci.value = ledState.count;
+        renderLedRows();
+        updateFeatureStatus('/ledConfig', true);
+      } catch (e) {
+        body.innerHTML = '<p class="auth-msg err">Could not load LED settings.</p>';
+        updateFeatureStatus('/ledConfig', false);
+      }
+    }
+    function closeLedColorModal() { document.getElementById('ledColorModal').hidden = true; }
+
+    async function saveLedColors() {
+      syncLedInputs();
+      const msg = document.getElementById('ledColorMsg');
+      const btn = document.getElementById('ledColorSaveBtn');
+      const map = [], red = [], yellow = [], green = [], col1 = [], col2 = [], col3 = [];
+      for (let i = 0; i < ledState.count; i++) {
+        const L = Object.assign({}, LED_FALLBACK, ledState.leds[i] || {});
+        map.push(L.map); red.push(L.red); yellow.push(L.yellow); green.push(L.green);
+        col1.push(L.col1); col2.push(L.col2); col3.push(L.col3);
+      }
+      const payload = {
+        led_toggle: document.getElementById('led_toggle_cb').checked,
+        ldr_toggle: document.getElementById('ldr_toggle_cb').checked,
+        count: ledState.count,
+        map, red, yellow, green, col1, col2, col3
+      };
+      btn.disabled = true; msg.className = 'auth-msg'; msg.textContent = 'Saving…';
+      try {
+        await fetchJSON('/ledConfigSet', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        msg.className = 'auth-msg ok'; msg.textContent = 'Saved!';
+        setTimeout(closeLedColorModal, 700);
+      } catch (e) {
+        msg.className = 'auth-msg err'; msg.textContent = 'Save failed';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    /* ── Import: read the file, then ask for its password ── */
+    async function importFromFile(input, ctx) {
+      const file = input.files && input.files[0];
+      input.value = '';                 // allow re-importing the same file later
+      if (!file) return;
+      let text;
+      try { text = await file.text(); JSON.parse(text); }
+      catch (e) { alert('That is not a valid JSON config file.'); return; }
+      pendingImport = text;
+      document.getElementById('importPass').value = '';
+      const im = document.getElementById('importMsg'); im.className = 'auth-msg'; im.textContent = '';
+      document.getElementById('importOverlay').hidden = false;
+    }
+
+    async function confirmImport() {
+      if (pendingImport === null) return;
+      const im = document.getElementById('importMsg');
+      im.className = 'auth-msg'; im.textContent = 'Importing…';
+      const btn = document.getElementById('importConfirmBtn');
+      btn.disabled = true;
+      const pw = document.getElementById('importPass').value;
+      try {
+        const result = await fetchJSON('/importConfig', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: pendingImport, password: pw })
+        });
+        im.className = 'auth-msg ok';
+        im.textContent = (result.message || 'Imported') + ' — reconnecting…';
+        pendingImport = null;
+        setTimeout(() => location.reload(), 6000); // device restarts after import
+      } catch (e) {
+        im.className = 'auth-msg err';
+        im.textContent = 'Import failed (wrong password or bad file)';
+        btn.disabled = false;
+      }
+    }
+
+    function cancelImport() {
+      pendingImport = null;
+      document.getElementById('importOverlay').hidden = true;
+    }
+
     let isRestarting = false;
     async function restartESP() {
       if (isRestarting) return;
@@ -883,6 +1342,67 @@
 
 <body>
 
+  <!-- Password prompt for an uploaded config (dialog over everything) -->
+  <div class="modal" id="importOverlay" style="z-index:1100" hidden>
+    <div class="auth-card" id="importPassPanel">
+      <h2>Config password</h2>
+      <p>Enter the password this configuration file was exported with. Leave blank if it had none.</p>
+      <input type="password" id="importPass" placeholder="leave blank if none"
+             onkeydown="if(event.key==='Enter')confirmImport()">
+      <button class="btn-submit" id="importConfirmBtn" onclick="confirmImport()">Import &amp; Restart</button>
+      <button class="btn-config" onclick="cancelImport()">Cancel</button>
+      <div class="auth-msg" id="importMsg"></div>
+    </div>
+  </div>
+
+  <!-- Current-config modal -->
+  <div class="modal" id="configModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="section-title">Current Configuration</div>
+        <button class="modal-close" onclick="closeConfigModal()" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="configFrame" title="Current configuration"></iframe>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-config" id="exportBtn" onclick="exportConfig()">⬇ Export Config</button>
+        <button class="btn-config" id="importBtn"
+                onclick="document.getElementById('importFile').click()">⬆ Import Config</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none"
+               onchange="importFromFile(this, 'modal')">
+      </div>
+    </div>
+  </div>
+
+  <!-- Sensor status LED settings modal (all LED config lives here) -->
+  <div class="modal" id="ledColorModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="section-title">Sensor status LEDs</div>
+        <button class="modal-close" onclick="closeLedColorModal()" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="led-top">
+          <label class="led-check"><input type="checkbox" id="led_toggle_cb"> Sensor status LEDs (WS2812 on LED pin)</label>
+          <label class="led-check"><input type="checkbox" id="ldr_toggle_cb"> Auto LED brightness from LDR (on LDR pin)</label>
+          <label class="led-count">Number of LEDs
+            <input type="number" id="led_count_in" min="1" value="5" onchange="onLedCountChange()">
+          </label>
+        </div>
+        <p class="ledcolor-hint">Each LED shows a sensor, coloured by its live reading on a
+          3-step scale. Pick the sensor (picking one fills in sensible defaults), then set the
+          value <b>and colour</b> for each step — the live reading is interpolated between them.</p>
+        <div id="ledColorBody"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-submit" id="ledColorSaveBtn" onclick="saveLedColors()">Save LED settings</button>
+        <button class="btn-config" onclick="closeLedColorModal()">Cancel</button>
+        <div class="auth-msg" id="ledColorMsg"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Theme switcher -->
   <div class="theme-bar">
     <span class="theme-bar-label">Theme</span>
@@ -898,7 +1418,38 @@
     <p id="title3"></p>
   </header>
 
-  <main class="main-card">
+  <!-- Auth gate: shown in place of the config card when login/setup is needed -->
+  <div class="auth-gate" id="authGate" hidden>
+
+    <!-- First-run setup -->
+    <div class="auth-card" id="setupPanel" hidden>
+      <h2>First-time setup</h2>
+      <p>Protect this device with a password, or restore a saved configuration. The password can be left blank.</p>
+      <span class="auth-label">Password (optional)</span>
+      <input type="password" id="setupPass" placeholder="leave blank for no password"
+             onkeydown="if(event.key==='Enter')doSetup()">
+      <button class="btn-submit" id="setupBtn" onclick="doSetup()">Continue</button>
+      <div class="auth-sep">or</div>
+      <button class="btn-config" id="setupImportBtn"
+              onclick="document.getElementById('setupImportFile').click()">⬆ Upload configuration</button>
+      <input type="file" id="setupImportFile" accept=".json,application/json" style="display:none"
+             onchange="importFromFile(this, 'setup')">
+      <div class="auth-msg" id="setupMsg"></div>
+    </div>
+
+    <!-- Login -->
+    <div class="auth-card" id="loginPanel" hidden>
+      <h2>🔒 Login</h2>
+      <p>Enter the device password to continue.</p>
+      <input type="password" id="loginPass" placeholder="password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn-submit" id="loginBtn" onclick="doLogin()">Log in</button>
+      <div class="auth-msg" id="loginMsg"></div>
+    </div>
+
+  </div>
+
+  <main class="main-card" id="mainCard" hidden>
 
     <div class="section">
       <div class="section-title">WiFi Network</div>
@@ -923,10 +1474,12 @@
 
     <div class="action-row">
       <button class="btn-restore" id="refreshBtn" onclick="makeFirstFieldBlock()">↺ Restore</button>
-      <a href="currentConfig" style="flex:1; text-decoration:none;">
-        <button class="btn-config">⎘ Current Config</button>
-      </a>
+      <button class="btn-config" id="currentConfigBtn" onclick="openConfigModal()">⎘ Current Config</button>
       <button class="btn-restart" id="restartBtn" onclick="restartESP()">⏻ Restart ESP</button>
+    </div>
+
+    <div class="action-row" id="logoutRow" hidden>
+      <button class="btn-restart" id="logoutBtn" style="flex:1;" onclick="doLogout()">⎋ Log out</button>
     </div>
 
   </main>
@@ -954,6 +1507,8 @@
 <script>
   initTheme();
   renderFeatureList();
-  makeFirstFieldBlock();
+  fetchTitles();                    // header titles + footer device-info, always
+  setInterval(fetchTitles, 1000);
+  checkAuth();
 </script>
 </html>
