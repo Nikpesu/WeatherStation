@@ -233,6 +233,28 @@
 #endif
 #define LDR_ADC_MAX 4095 // 12-bit ADC full-scale (ESP32 analogRead default)
 
+// Onboard ESP status LED, used for the boot blink (separate from the WS2812 strip).
+// Defaults to the board's built-in LED. XIAO and ESP8266 built-in LEDs are active-low
+// (lit when the pin is driven LOW), most ESP32 devkit LEDs are active-high.
+#ifndef ESP_STATUS_LED_PIN
+  #ifdef LED_BUILTIN
+    #define ESP_STATUS_LED_PIN LED_BUILTIN
+  #else
+    #define ESP_STATUS_LED_PIN 2
+  #endif
+#endif
+#ifndef ESP_STATUS_LED_ACTIVE_LOW
+  #if defined(SEEED_XIAO_ESP32C3) || defined(SEEED_XIAO_ESP32C6) || defined(SEEED_XIAO_ESP32S3) || defined(ESP8266)
+    #define ESP_STATUS_LED_ACTIVE_LOW 1
+  #else
+    #define ESP_STATUS_LED_ACTIVE_LOW 0
+  #endif
+#endif
+
+// Number of entries in ledMeasures[] (WS_leds.h). Used to size the per-measurement
+// calibration-offset array. A static_assert in WS_leds.h keeps the two in sync.
+#define SENSOR_MEASURE_COUNT 32
+
 // Board "Dx" pin-name -> GPIO number lookup, so pins can be entered either as a
 // raw GPIO number or as the silkscreen "Dx" label (resolved by pinFromString()).
 #if defined(SEEED_XIAO_ESP32C3) || defined(SEEED_XIAO_ESP32C6) || defined(SEEED_XIAO_ESP32S3)
@@ -279,14 +301,16 @@ String runningTime();
 //json.h
 void loadConfig();
 bool saveConfig();
+void backupConfigToNVS(); // mirror /config.json into NVS so an FS-erasing flash keeps settings
 void updateFieldsToNative();
 void updateFieldsToString();
 String exportConfig();
-bool importConfig(String jsonStr, String password);
+int importConfig(String jsonStr, String password); // 0=ok, 1=bad file, 2=wrong password
 //auth (defined in json.h)
 String createSession();
 bool isAuthed();
 void clearCurrentSession();
+void saveSessions();
 bool loadSetupDone();
 void saveSetupDone(bool done);
 //leds.h
@@ -373,6 +397,9 @@ struct WSConfig {
   bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
   int refreshTime = REFRESH_TIME;
   String suggested_area = SUGGESTED_AREA;
+  // Bluetooth HCI-over-TCP bridge (esp_bt controller exposed on a TCP port).
+  // Off by default; uses significant RAM and needs a restart to (de)activate.
+  bool bt_bridge_toggle = false;
 
   // sensor status-indicator LEDs (WS2812)
   bool led_toggle = LED_INDICATOR_TOGGLE;
@@ -390,11 +417,25 @@ struct WSConfig {
   float led_red[LED_MAX_COUNT]    = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   float led_yellow[LED_MAX_COUNT] = {50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50};
   float led_green[LED_MAX_COUNT]  = {100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100};
-  // Per-LED, per-step colours (packed 0xRRGGBB). Defaults: step1 red, step2
-  // yellow, step3 green — but each is a colour picker in the popup.
-  uint32_t led_col1[LED_MAX_COUNT] = {0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935,0xE53935};
-  uint32_t led_col2[LED_MAX_COUNT] = {0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825,0xF9A825};
-  uint32_t led_col3[LED_MAX_COUNT] = {0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60,0x27AE60};
+  // Per-LED, per-step colours (packed 0xRRGGBB). Fully-saturated LED primaries so
+  // they render vividly on WS2812s. Defaults: step1 red, step2 yellow, step3 green
+  // (each is a colour picker in the popup).
+  uint32_t led_col1[LED_MAX_COUNT] = {0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000,0xFF0000};
+  uint32_t led_col2[LED_MAX_COUNT] = {0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00,0xFFFF00};
+  uint32_t led_col3[LED_MAX_COUNT] = {0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00,0x00FF00};
+
+  // LDR auto-brightness calibration (editable in the LED popup). Ambient = raw ADC
+  // input range (min..max); Bright = LED output brightness range (0-255). A bright
+  // ambient (low ADC) maps to ldr_bright_max; a dark ambient (high ADC) to ldr_bright_min.
+  int ldr_ambient_min = 0;             // ADC reading at brightest ambient
+  int ldr_ambient_max = LDR_ADC_MAX;   // ADC reading at darkest ambient
+  int ldr_bright_min  = LED_BRIGHTNESS_MIN; // dimmest LED output (in the dark)
+  int ldr_bright_max  = LED_BRIGHTNESS_MAX; // brightest LED output (in daylight)
+
+  // Per-measurement calibration offset, added to each live reading. Indexed
+  // identically to ledMeasures[] / led_map (0..SENSOR_MEASURE_COUNT-1). Editable in
+  // the sensor-calibration popup. Default 0 = no correction.
+  float sensor_offset[SENSOR_MEASURE_COUNT] = {0};
 
   // master password used to encrypt the sensitive fields at rest. Kept only in
   // NVS (ESP32) / a key file (ESP8266), never written into /config.json. Empty
@@ -447,6 +488,7 @@ String &hotspot_pass = config.hotspot_pass;
 bool &lowPowerMode_toggle = config.lowPowerMode_toggle;
 int &refreshTime = config.refreshTime;
 String &suggested_area = config.suggested_area;
+bool &bt_bridge_toggle = config.bt_bridge_toggle;
 bool &led_toggle = config.led_toggle;
 bool &ldr_brightness_toggle = config.ldr_brightness_toggle;
 String &config_password = config.config_password;
@@ -467,12 +509,13 @@ bool &SPS30_toggle = config.SPS30_toggle;
 String mqtt_port_str = String(mqtt_port);
 String lowPowerMode_toggle_str = String(lowPowerMode_toggle);
 String refreshTime_str = String(refreshTime);
+String bt_bridge_toggle_str = String(bt_bridge_toggle);
 String test = "1";
 
 // NOTE: the LED toggles (led_toggle, ldr_brightness_toggle) and all other LED
 // settings are NOT in this list — they live entirely in the LED popup and are
 // persisted directly by buildConfigJson()/loadConfig().
-#define FIELD_COUNT 14
+#define FIELD_COUNT 15
 String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"wifi_ssid", "Wifi SSID:", "text", "SSID"},
     {"wifi_pass", "Wifi Password:", "password", "password"},
@@ -487,6 +530,7 @@ String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"lowPowerMode_toggle", "Low Power Mode (can only be configured in hotspot mode!!)", "checkbox", ""},
     {"refreshTime", "Refresh Time:", "number", "default: 30"},
     {"suggested_area", "Suggested area:", "text", "for example: Outside, Inside, Bedroom..."},
+    {"bt_bridge_toggle", "Bluetooth HCI bridge (TCP, needs restart)", "checkbox", ""},
     {"config_password", "Config Password (encrypts stored secrets, leave blank for none):", "password", "password"}
 };
 String* fields[FIELD_COUNT] = {
@@ -503,6 +547,7 @@ String* fields[FIELD_COUNT] = {
     &lowPowerMode_toggle_str,
     &refreshTime_str,
     &suggested_area,
+    &bt_bridge_toggle_str,
     &config_password
 };
 
@@ -604,6 +649,37 @@ float scd4x_co2=nan(""), scd4x_temp=nan(""), scd4x_hum=nan("");
 float sgp30_tvoc=nan(""), sgp30_co2=nan(""), sgp30_eth=nan(""), sgp30_h2=nan("");
 float sht31_temp=nan(""), sht31_hum=nan("");
 float sps30_pm1_0 = nan(""), sps30_pm2_5 = nan(""), sps30_pm10_0 = nan("");
+
+// Home Assistant discovery unique_id version tag. Bump this (e.g. "v2" -> "v3") to
+// force HA to register the sensors as brand-new entities, dropping any stale
+// entity_id it kept in its registry keyed by the old unique_id.
+#define DISCOVERY_UID_VER "v2"
+
+// Known plaintext stored (encrypted with the config password) in every export as
+// "pw_check". On import it is decrypted with the supplied password; a mismatch means
+// the wrong password was given, so the import is rejected before anything is applied.
+#define CONFIG_PW_CHECK "ws-config-ok"
+
+// Board key used for OTA asset matching and the firmware-maker output folders.
+// Must equal the PlatformIO env name so "<FW_BOARD>-firmware.bin" / "-littlefs.bin"
+// line up with the GitHub-release assets (see WS_ota.h and firmware maker/).
+#if defined(SEEED_XIAO_ESP32C3)
+  #define FW_BOARD "seeed_xiao_esp32c3"
+#elif defined(SEEED_XIAO_ESP32C6)
+  #define FW_BOARD "seeed_xiao_esp32c6"
+#elif defined(SEEED_XIAO_ESP32S3)
+  #define FW_BOARD "seeed_xiao_esp32s3"
+#elif defined(LOLIN_S2_MINI)
+  #define FW_BOARD "lolin_s2_mini"
+#elif defined(ESP32DOIT_DEVKIT_V1)
+  #define FW_BOARD "esp32doit_devkit_v1"
+#elif defined(AZ_DELIVERY_DEVKIT_V4)
+  #define FW_BOARD "az_delivery_devkit_v4"
+#elif defined(D1_MINI)
+  #define FW_BOARD "d1_mini"
+#else
+  #define FW_BOARD "unknown"
+#endif
 
 //TODO update sw/hw version
 String SWversion="3.4.0"; //software version

@@ -94,6 +94,11 @@
     ══════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* The `hidden` attribute must always win. Elements like .main-card and .section
+       set `display:flex`, which otherwise overrides the UA [hidden] rule and leaves
+       them visible on the login / setup / passChange gate pages. */
+    [hidden] { display: none !important; }
+
     html { font-size: 18px; } /* base font size - everything scales from here */
 
     body {
@@ -179,16 +184,18 @@
 
     #title1 {
       font-family: 'Share Tech Mono', monospace;
-      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-size: clamp(2.1rem, 6.5vw, 3.1rem);
+      font-weight: 700;
       color: var(--accent);
-      letter-spacing: 0.08em;
-      text-shadow: var(--title-shadow);
-      margin-bottom: 0.4rem;
+      letter-spacing: 0.06em;
+      text-shadow: var(--title-shadow), 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent);
+      filter: brightness(1.12);
+      margin-bottom: 0.45rem;
     }
 
     #title2 {
-      font-size: 0.88rem;
-      color: var(--text-dim);
+      font-size: 0.92rem;
+      color: var(--text);
       font-family: 'Share Tech Mono', monospace;
       margin-bottom: 0.15rem;
     }
@@ -218,11 +225,12 @@
     .section { display: flex; flex-direction: column; gap: 0.6rem; }
 
     .section-title {
-      font-size: 0.72rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 0.13em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--accent);
+      text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent);
       font-family: 'Share Tech Mono', monospace;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
@@ -233,8 +241,9 @@
       background: linear-gradient(90deg, transparent, var(--border), transparent);
     }
 
-    /* ── Generated field labels ── */
-    #fields1 label {
+    /* ── Generated field labels (main form + advanced popup) ── */
+    #fields1 label,
+    #advFields label {
       display: block;
       font-size: 0.72rem !important;
       font-weight: 600 !important;
@@ -247,7 +256,7 @@
     }
 
     #fields1 label[for="sensors"],
-    #fields1 label[for="pins"] {
+    #advFields label[for="pins"] {
       margin-top: 1.4rem !important;
       padding-bottom: 0.4rem !important;
       border-bottom: 1px solid var(--border) !important;
@@ -410,10 +419,10 @@
     }
     .btn-restart:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); }
 
-    /* ── Sensors grid ── */
+    /* ── Sensors grid (auto-fill bricks that tile and fill the row) ── */
     .senzori {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
       gap: 0.5rem;
       width: 100%;
       margin-top: 0.4rem;
@@ -461,11 +470,11 @@
       transform: translateY(-50%) translateX(0.9rem);
     }
 
-    /* ── Pins ── */
+    /* ── Pins (auto-fill bricks: each tile stretches to fill its grid cell) ── */
     .pinovi {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+      gap: 0.6rem;
       width: 100%;
       margin-top: 0.4rem;
     }
@@ -473,8 +482,12 @@
     .pin {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       gap: 0.3rem;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.6rem;
     }
 
     .pin label {
@@ -483,20 +496,22 @@
       color: var(--text-dim) !important;
       text-transform: uppercase !important;
       letter-spacing: 0.08em !important;
+      text-align: center !important;
       margin: 0 !important;
       border: none !important;
       padding: 0 !important;
     }
 
     .pin input[type="text"] {
-      width: 5rem;
+      width: 100%;
       text-align: center;
       padding: 0.4rem 0.3rem;
       font-size: 0.95rem;
     }
 
     .pin select {
-      min-width: 7rem;
+      width: 100%;
+      min-width: 0;
       padding: 0.4rem 0.3rem;
       font-size: 0.9rem;
     }
@@ -518,7 +533,7 @@
     .ledcolor-live { margin-left: auto; color: var(--text-dim); font-size: 0.8rem; }
     .ledcolor-bar {
       height: 14px; border-radius: 7px; border: 1px solid var(--border);
-      background: linear-gradient(to right, #e53935 0%, #f9a825 50%, #27ae60 100%);
+      background: linear-gradient(to right, #ff0000 0%, #ffff00 50%, #00ff00 100%);
       margin-bottom: 0.5rem;
     }
     .ledcolor-inputs {
@@ -546,6 +561,79 @@
     .led-sel { flex: 1; min-width: 5rem; }
     .ledcolor-head { flex-wrap: wrap; }
     .ledcolor-head select { padding: 0.35rem 0.5rem; font-size: 0.88rem; }
+    .led-cal {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+      gap: 0.5rem 0.7rem;
+    }
+    .led-cal label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem; color: var(--text-dim); }
+    .led-cal input { width: 100%; text-align: center; padding: 0.4rem 0.3rem; font-size: 0.9rem; }
+    .ldr-live {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.82rem;
+      color: var(--text-dim); margin-top: 0.2rem;
+    }
+    .ldr-live b { color: var(--accent2); }
+
+    /* Field checkbox laid out as a label + normal-size toggle row (so the toggle
+       keeps its regular pill dimensions instead of stretching full width). The
+       #fields1 prefix is needed to beat the generic "#fields1 label" ID rule. */
+    #fields1 .field-check,
+    #advFields .field-check {
+      display: flex !important; align-items: center; justify-content: space-between;
+      gap: 0.8rem; cursor: pointer;
+    }
+    #fields1 .field-check span,
+    #advFields .field-check span {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
+      color: var(--text); text-transform: none; letter-spacing: 0.04em;
+    }
+
+    /* Padded, scrollable popup content area (consistent edge spacing for the LED
+       and calibration popups). */
+    .modal-scroll {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: 0.9rem 1.1rem;
+    }
+
+    /* ── Live readings panel ── */
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+    }
+    .live-item {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.5rem 0.7rem;
+      display: flex; flex-direction: column; gap: 0.2rem;
+    }
+    .live-label {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.66rem;
+      color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .live-val {
+      font-family: 'Share Tech Mono', monospace; font-size: 1.15rem;
+      color: var(--accent2); font-weight: 700;
+    }
+    .live-empty { color: var(--text-dim); font-size: 0.85rem; }
+
+    /* ── Sensor calibration popup rows ── */
+    .cal-row {
+      display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.6rem 0.9rem; margin-bottom: 0.5rem;
+    }
+    .cal-name { color: var(--accent); font-weight: bold; font-size: 0.9rem; }
+    .cal-name small { color: var(--text-dim); font-weight: normal; }
+    .cal-live { margin-left: auto; color: var(--text-dim); font-size: 0.82rem; }
+    .cal-row input[type="number"] {
+      width: 6rem; text-align: center; padding: 0.4rem 0.3rem; font-size: 0.9rem;
+    }
+    .cal-sensorhead {
+      font-family: 'Share Tech Mono', monospace; font-size: 0.72rem;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+      margin: 0.8rem 0 0.4rem;
+    }
 
     /* ── Footer ── */
     footer {
@@ -567,11 +655,12 @@
     }
 
     .footer-card-title {
-      font-size: 0.72rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 0.13em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: var(--text-dim);
+      color: var(--accent);
+      text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent);
       font-family: 'Share Tech Mono', monospace;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
@@ -756,6 +845,8 @@
       '/sensors': { label: 'Sensors',       status: null },
       '/pins':    { label: 'Pin config',    status: null },
       '/ledConfig': { label: 'LED settings',  status: null },
+      '/liveValues': { label: 'Live values', status: null },
+      '/offsetConfig': { label: 'Calibration', status: null },
       '/titles':  { label: 'Live titles',   status: null },
       '/wifi':    { label: 'WiFi scan',     status: null },
       '/data':    { label: 'Save config',   status: null },
@@ -875,27 +966,53 @@
       isMaking = 0;
     }
 
+    // Fields that live in the Advanced Settings popup instead of the main form.
+    const ADVANCED_FIELDS = new Set([
+      'mqtt_server','mqtt_port','mqtt_user','mqtt_password','mqtt_messageRoot',
+      'hotspot_ssid','hotspot_pass','lowPowerMode_toggle','refreshTime','suggested_area'
+    ]);
+
+    function fieldHtml(f) {
+      if (f.type === 'checkbox')
+        return `<label class="field-check" for="${f.fieldID}"><span>${f.labelText}</span>` +
+               `<input type="checkbox" name="${f.fieldID}" id="${f.fieldID}" ${Boolean(Number(f.value)) ? 'checked' : ''}></label>\n`;
+      // Suggested area gets a datalist (dropdown of presets + free text).
+      const listAttr = (f.fieldID === 'suggested_area') ? ' list="areaList"' : '';
+      const type = (f.fieldID === 'suggested_area') ? 'text' : f.type;
+      if (['text','password','number'].includes(f.type))
+        return `<label for="${f.fieldID}">${f.labelText}</label>` +
+               `<input style="width:100%;"${listAttr} type="${type}" placeholder="${f.placeholder}" name="${f.fieldID}" id="${f.fieldID}" value="${f.value}">\n`;
+      return '';
+    }
+
     async function makeFirstFieldBlock() {
       await makeSensors();
       try {
         const data = await fetchJSON('/fields');
-        let html = "";
-        for (let i = 0; i < data.length; i++) {
-          if (data[i].type === "checkbox")
-            html +=
-              `<label for="${data[i].fieldID}">${data[i].labelText}</label>` +
-              `<input style="width:100%;" type="checkbox" name="${data[i].fieldID}" id="${data[i].fieldID}" ${Boolean(Number(data[i].value)) ? 'checked' : ''}>\n`;
-          if (["text","password","number"].includes(data[i].type))
-            html +=
-              `<label for="${data[i].fieldID}">${data[i].labelText}</label>` +
-              `<input style="width:100%;" type="${data[i].type}" placeholder="${data[i].placeholder}" name="${data[i].fieldID}" id="${data[i].fieldID}" value="${data[i].value}">\n`;
-          if (data[i].fieldID === "mdns_hostname")
-            html +=
+        let basic = '', adv = '', btChecked = false;
+        for (const f of data) {
+          if (f.fieldID === 'config_password') continue;                 // managed on /passChange
+          if (f.fieldID === 'bt_bridge_toggle') { btChecked = Boolean(Number(f.value)); continue; }
+
+          const h = fieldHtml(f);
+          if (ADVANCED_FIELDS.has(f.fieldID)) adv += h; else basic += h;
+
+          if (f.fieldID === 'mdns_hostname')
+            basic +=
               `<label for="sensors">Sensors</label><div id="sensors" class="senzori"></div>` +
-              (pinsHtml ? `<label for="pins">Pins</label><div id="pins" class="pinovi"></div>` : '') +
-              `<button type="button" class="btn-config" style="margin-top:0.8rem" onclick="openLedColorModal()">🚦 Sensor status LEDs</button>`;
+              `<button type="button" class="btn-config" style="margin-top:0.8rem" onclick="openLedColorModal()">🚦 Sensor status LEDs</button>` +
+              `<button type="button" class="btn-config" style="margin-top:0.5rem" onclick="openOffsetModal()">🎚 Sensor calibration</button>` +
+              `<button type="button" class="btn-config" style="margin-top:0.5rem" onclick="openAdvancedModal()">⚙ Advanced settings</button>`;
         }
-        document.getElementById('fields1').innerHTML = html;
+        // Pins + Bluetooth bridge live in the Advanced popup.
+        adv += (pinsHtml ? `<label for="pins">Pins</label><div id="pins" class="pinovi"></div>` : '');
+        adv += `<label>Bluetooth</label>` +
+               `<label class="field-check" for="bt_bridge_toggle"><span>BT HCI bridge (needs restart)</span>` +
+               `<input type="checkbox" id="bt_bridge_toggle" name="bt_bridge_toggle" ${btChecked ? 'checked' : ''}></label>` +
+               `<div class="ldr-live" id="btStatus">Bluetooth: …</div>`;
+
+        document.getElementById('fields1').innerHTML = basic;
+        document.getElementById('advFields').innerHTML = adv;
         document.getElementById('sensors').innerHTML = buttonHtml;
         const pinsEl = document.getElementById('pins');
         if (pinsEl && pinsHtml) pinsEl.innerHTML = pinsHtml;
@@ -905,7 +1022,39 @@
         updateFeatureStatus('/fields', false);
       }
 
+      buildLivePanel();   // (re)build the live readings panel for the enabled sensors
       renderFeatureList();
+    }
+
+    /* ── Advanced settings popup ── */
+    let advTimer = null;
+    async function refreshBtStatus() {
+      const el = document.getElementById('btStatus');
+      if (!el) return;
+      try {
+        const d = await fetchJSON('/btStatus');
+        if (!d.supported) { el.textContent = 'Bluetooth: not supported on this chip'; return; }
+        let s = d.running ? `running on TCP port ${d.port}` : (d.enabled ? 'enabled — restart to start' : 'disabled');
+        if (d.running && d.client) s += ' · host attached';
+        el.textContent = 'Bluetooth: ' + s;
+      } catch (e) { /* leave last value */ }
+    }
+    function openAdvancedModal() {
+      document.getElementById('advancedModal').hidden = false;
+      const msg = document.getElementById('advMsg'); if (msg) { msg.className = 'auth-msg'; msg.textContent = ''; }
+      refreshBtStatus();
+      if (advTimer) clearInterval(advTimer);
+      advTimer = setInterval(refreshBtStatus, 2000);
+    }
+    function closeAdvancedModal() {
+      document.getElementById('advancedModal').hidden = true;
+      if (advTimer) { clearInterval(advTimer); advTimer = null; }
+    }
+    async function saveAdvanced() {
+      const msg = document.getElementById('advMsg');
+      msg.className = 'auth-msg'; msg.textContent = 'Saving…';
+      await sendData();   // saves ALL fields (basic + advanced live in the same DOM)
+      msg.className = 'auth-msg ok'; msg.textContent = 'Saved (Bluetooth changes need a restart)';
     }
 
     const delay = ms => new Promise(r => setTimeout(r, ms));
@@ -948,6 +1097,7 @@
 
         if (result.message === "bad!") throw new Error("JSON failed parsing on server");
         updateFeatureStatus('/data', true);
+        buildLivePanel();   // sensor enable/disable may have changed the live panel
         button.style.cssText = 'background:var(--accent2);border-color:var(--accent2);color:var(--bg);';
         button.textContent = result.message || 'Saved!';
 
@@ -1008,25 +1158,50 @@
     function showGate(panel) {
       document.getElementById('mainCard').hidden = true;
       document.getElementById('authGate').hidden = false;
-      document.getElementById('setupPanel').hidden = (panel !== 'setupPanel');
-      document.getElementById('loginPanel').hidden = (panel !== 'loginPanel');
+      // Show only the requested auth card (setup / login / passChange).
+      document.querySelectorAll('#authGate .auth-card').forEach(c => c.hidden = (c.id !== panel));
+      // On these gate pages show nothing but the footer credit line: hide the
+      // Device Info + Firmware Feature Support cards.
+      document.querySelectorAll('footer .footer-card').forEach(c => c.hidden = true);
     }
 
-    async function checkAuth() {
+    // Route-aware entry: the device serves this same file at /login, /firstsetup and
+    // /homepage. Pick what to show from the URL + the current auth state, redirecting
+    // to the correct page when they don't match (location.replace keeps history clean).
+    async function route() {
+      const path = location.pathname;
       let s;
       try { s = await fetchJSON('/status'); }
       catch (e) { console.warn('/status:', e.message); enterApp(null); return; }
-      if (s.needsSetup) { showGate('setupPanel'); return; }
-      if (s.authRequired && !s.authenticated) { showGate('loginPanel'); return; }
+
+      if (path === '/firstsetup') {
+        if (!s.needsSetup) { location.replace((s.authRequired && !s.authenticated) ? '/login' : '/homepage'); return; }
+        showGate('setupPanel'); return;
+      }
+      if (path === '/login') {
+        if (s.needsSetup) { location.replace('/firstsetup'); return; }
+        if (!s.authRequired || s.authenticated) { location.replace('/homepage'); return; }
+        showGate('loginPanel'); return;
+      }
+      if (path === '/passChange') {
+        if (s.needsSetup) { location.replace('/firstsetup'); return; }
+        if (s.authRequired && !s.authenticated) { location.replace('/login'); return; }
+        showGate('passChangePanel'); return;
+      }
+      // /homepage (or any other path): show the app, or bounce to the right gate.
+      if (s.needsSetup) { location.replace('/firstsetup'); return; }
+      if (s.authRequired && !s.authenticated) { location.replace('/login'); return; }
       enterApp(s);
     }
 
     function enterApp(s) {
       document.getElementById('authGate').hidden = true;
       document.getElementById('mainCard').hidden = false;
-      const lr = document.getElementById('logoutRow');
-      if (lr) lr.hidden = !(s && s.authRequired);
+      document.querySelectorAll('footer .footer-card').forEach(c => c.hidden = false);
+      const lb = document.getElementById('logoutBtn');   // Log out only when a password is set
+      if (lb) lb.hidden = !(s && s.authRequired);
       if (!appStarted) { appStarted = 1; makeFirstFieldBlock(); }
+      startLive();   // live readings panel + 3s value polling (guards double-start)
     }
 
     async function doLogin() {
@@ -1039,8 +1214,7 @@
           body: JSON.stringify({ password: pass })
         });
         msg.className = 'auth-msg ok'; msg.textContent = 'Welcome!';
-        const s = await fetchJSON('/status');
-        enterApp(s);
+        location.href = '/homepage';   // logged in → go to the app
       } catch (e) {
         msg.className = 'auth-msg err'; msg.textContent = 'Wrong password';
       }
@@ -1055,16 +1229,35 @@
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: pass })
         });
-        const s = await fetchJSON('/status');
-        enterApp(s);
+        msg.className = 'auth-msg ok'; msg.textContent = 'Done!';
+        location.href = '/homepage';   // setup also logs you in → go to the app
       } catch (e) {
         msg.className = 'auth-msg err'; msg.textContent = 'Setup failed';
       }
     }
 
-    async function doLogout() {
-      try { await fetch('/logout', { method: 'POST' }); } catch (e) {}
-      location.reload();
+    // Server clears the session and 302-redirects to /login.
+    function doLogout() { location.href = '/logout'; }
+
+    async function doPassChange() {
+      const msg = document.getElementById('pcMsg');
+      const oldp = document.getElementById('pcOld').value;
+      const n1 = document.getElementById('pcNew').value;
+      const n2 = document.getElementById('pcNew2').value;
+      if (n1 !== n2) { msg.className = 'auth-msg err'; msg.textContent = 'New passwords do not match'; return; }
+      const btn = document.getElementById('pcBtn');
+      btn.disabled = true; msg.className = 'auth-msg'; msg.textContent = 'Saving…';
+      try {
+        await fetchJSON('/passChange', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oldPassword: oldp, newPassword: n1 })
+        });
+        msg.className = 'auth-msg ok'; msg.textContent = 'Password changed!';
+        location.href = '/homepage';   // new session cookie is set (or cleared if blank)
+      } catch (e) {
+        msg.className = 'auth-msg err'; msg.textContent = 'Wrong current password';
+        btn.disabled = false;
+      }
     }
 
     /* ── Current-config modal ── */
@@ -1075,24 +1268,113 @@
     }
     function closeConfigModal() { document.getElementById('configModal').hidden = true; }
 
+    /* ── Firmware update modal (GitHub OTA + manual .bin upload) ── */
+    function openUpdateModal() {
+      document.getElementById('updateModal').hidden = false;
+      document.getElementById('otaStatus').textContent = '';
+      document.getElementById('otaUpdateBtn').hidden = true;
+      const um = document.getElementById('uploadMsg'); um.className = 'auth-msg'; um.textContent = '';
+    }
+    function closeUpdateModal() { document.getElementById('updateModal').hidden = true; }
+
+    // Countdown reload after a flash: the device reboots, so poll until it answers.
+    function otaReloadAfter(el) {
+      let left = 25;
+      const iv = setInterval(async () => {
+        left--;
+        el.textContent = `Rebooting… reconnecting in ${left}s`;
+        try { const r = await fetch('/status', { cache: 'no-store' }); if (r.ok) { clearInterval(iv); location.reload(); } } catch (e) {}
+        if (left <= 0) { clearInterval(iv); location.reload(); }
+      }, 1000);
+    }
+
+    async function checkOta() {
+      const st = document.getElementById('otaStatus');
+      const btn = document.getElementById('otaCheckBtn');
+      const up = document.getElementById('otaUpdateBtn');
+      btn.disabled = true; up.hidden = true; st.textContent = 'Checking GitHub…';
+      try {
+        const r = await fetch('/otaCheck');
+        const d = await r.json();
+        if (!r.ok) { st.textContent = 'Check failed: ' + (d.error || r.status); return; }
+        document.getElementById('otaCurrent').textContent = d.current;
+        document.getElementById('otaBoard').textContent = d.board;
+        document.getElementById('otaBoard2').textContent = d.board;
+        if (d.updateAvailable) {
+          st.textContent = `Update available: ${d.latest}  (installed: ${d.current})`;
+          up.textContent = '⬇ Download & install ' + d.latest;
+          up.hidden = false;
+        } else {
+          st.textContent = `Up to date — latest is ${d.latest}.`;
+          up.textContent = '⟳ Reinstall ' + d.latest;
+          up.hidden = false;
+        }
+        if (!d.hasFirmware) st.textContent += `\n(No "${d.board}-firmware.bin" asset in that release.)`;
+      } catch (e) {
+        st.textContent = 'Check failed: ' + e.message;
+      } finally { btn.disabled = false; }
+    }
+
+    async function doOta() {
+      const st = document.getElementById('otaStatus');
+      const up = document.getElementById('otaUpdateBtn');
+      const fs = document.getElementById('otaFsChk').checked;
+      if (!confirm('Download and install the update now? The device will reboot.')) return;
+      up.disabled = true;
+      st.textContent = 'Downloading & flashing… this can take a minute. Do not power off.';
+      try {
+        const r = await fetch('/otaUpdate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filesystem: fs })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) { otaReloadAfter(st); }
+        else { st.textContent = 'Update failed: ' + (d.error || r.status); up.disabled = false; }
+      } catch (e) {
+        // A reboot mid-response looks like a network error — the flash likely succeeded.
+        otaReloadAfter(st);
+      }
+    }
+
+    async function uploadBin(inputId, url) {
+      const inp = document.getElementById(inputId);
+      const msg = document.getElementById('uploadMsg');
+      if (!inp.files || !inp.files.length) { msg.className = 'auth-msg err'; msg.textContent = 'Choose a .bin file first.'; return; }
+      const file = inp.files[0];
+      if (!confirm('Upload ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB) and reboot?')) return;
+      msg.className = 'auth-msg'; msg.textContent = 'Uploading ' + file.name + '…';
+      const fd = new FormData();
+      fd.append('update', file, file.name);
+      try {
+        const r = await fetch(url + '?size=' + file.size, { method: 'POST', body: fd });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok) { msg.className = 'auth-msg ok'; otaReloadAfter(msg); }
+        else { msg.className = 'auth-msg err'; msg.textContent = 'Upload failed: ' + (d.message || r.status); }
+      } catch (e) {
+        msg.className = 'auth-msg ok'; otaReloadAfter(msg);
+      }
+    }
+
     /* ── Sensor status LED settings popup (all LED config lives here) ── */
     let ledState = { count: 5, maxCount: 16, sensors: [], measures: [], leds: [] };
 
     // Default step values + colours per measurement TYPE (the `key` from the
     // firmware measurement catalogue). Applied to a row when a part is picked.
+    // Fully-saturated colours. Green=good/comfortable, yellow=caution, red=bad/high;
+    // blue=cold/low. Chosen so each measurement's scale reads intuitively.
     const LED_DEFAULTS = {
-      temp:  { v: [0, 25, 40],       c: ['#2196f3', '#27ae60', '#e53935'] },
-      hum:   { v: [20, 50, 80],      c: ['#e5a23a', '#27ae60', '#2196f3'] },
-      co2:   { v: [400, 1000, 1500], c: ['#27ae60', '#f9a825', '#e53935'] },
-      tvoc:  { v: [0, 220, 660],     c: ['#27ae60', '#f9a825', '#e53935'] },
-      pm:    { v: [0, 35, 75],       c: ['#27ae60', '#f9a825', '#e53935'] },
-      aqi:   { v: [1, 3, 5],         c: ['#27ae60', '#f9a825', '#e53935'] },
-      press: { v: [980, 1013, 1040], c: ['#2196f3', '#27ae60', '#e53935'] },
-      alt:   { v: [0, 500, 1500],    c: ['#27ae60', '#f9a825', '#e53935'] },
-      hcho:  { v: [0, 0.05, 0.1],    c: ['#27ae60', '#f9a825', '#e53935'] },
-      raw:   { v: [0, 25000, 50000], c: ['#27ae60', '#f9a825', '#e53935'] }
+      temp:  { v: [0, 25, 40],       c: ['#0000ff', '#00ff00', '#ff0000'] }, // cold → comfy → hot
+      hum:   { v: [20, 50, 80],      c: ['#ff8000', '#00ff00', '#0000ff'] }, // dry → comfy → humid
+      co2:   { v: [400, 1000, 1500], c: ['#00ff00', '#ffff00', '#ff0000'] }, // good → bad
+      tvoc:  { v: [0, 220, 660],     c: ['#00ff00', '#ffff00', '#ff0000'] },
+      pm:    { v: [0, 35, 75],       c: ['#00ff00', '#ffff00', '#ff0000'] },
+      aqi:   { v: [1, 3, 5],         c: ['#00ff00', '#ffff00', '#ff0000'] },
+      press: { v: [980, 1013, 1040], c: ['#0000ff', '#00ff00', '#ff0000'] }, // low → normal → high
+      alt:   { v: [0, 500, 1500],    c: ['#00ff00', '#ffff00', '#ff0000'] },
+      hcho:  { v: [0, 0.05, 0.1],    c: ['#00ff00', '#ffff00', '#ff0000'] }, // low → high (worse)
+      raw:   { v: [0, 25000, 50000], c: ['#00ff00', '#ffff00', '#ff0000'] }
     };
-    const LED_FALLBACK = { map: -1, red: 0, yellow: 50, green: 100, col1: '#e53935', col2: '#f9a825', col3: '#27ae60', value: null };
+    const LED_FALLBACK = { map: -1, red: 0, yellow: 50, green: 100, col1: '#ff0000', col2: '#ffff00', col3: '#00ff00', value: null };
 
     // Live enabled state: prefer the actual Sensors checkbox on the page (so
     // toggling a sensor immediately affects the LED mapping), fall back to the
@@ -1140,7 +1422,7 @@
             `<div class="ledcolor-head">LED ${i + 1} · ` +
               `<select id="lc_sensor_${i}" class="led-sel" onchange="onLedSensorChange(${i})">${sensorOptionsHtml(sensorIdx)}</select>` +
               `<select id="lc_part_${i}" class="led-sel" onchange="onLedPartChange(${i})"${sensorIdx < 0 ? ' disabled' : ''}>${partOptionsHtml(sensorIdx, map)}</select>` +
-              `<span class="ledcolor-live">live: ${live}</span></div>` +
+              `<span class="ledcolor-live" id="lc_live_${i}">live: ${live}</span></div>` +
             `<div class="ledcolor-inputs">` +
               `<input type="color" id="lc_col1_${i}" value="${L.col1}">` +
               `<input type="number" step="any" id="lc_red_${i}" value="${L.red}">` +
@@ -1230,16 +1512,189 @@
         ledState = { count: d.count, maxCount: d.maxCount || 16, sensors: d.sensors || [], measures: d.measures || [], leds: d.leds || [] };
         document.getElementById('led_toggle_cb').checked = !!d.led_toggle;
         document.getElementById('ldr_toggle_cb').checked = !!d.ldr_toggle;
+        document.getElementById('ldr_amin_in').value = d.ldr_ambient_min;
+        document.getElementById('ldr_amax_in').value = d.ldr_ambient_max;
+        document.getElementById('ldr_bmin_in').value = d.ldr_bright_min;
+        document.getElementById('ldr_bmax_in').value = d.ldr_bright_max;
         const ci = document.getElementById('led_count_in');
         ci.max = ledState.maxCount; ci.value = ledState.count;
         renderLedRows();
+        startLdrLive();   // live LDR readout, refreshed every 0.5s while open
         updateFeatureStatus('/ledConfig', true);
       } catch (e) {
         body.innerHTML = '<p class="auth-msg err">Could not load LED settings.</p>';
         updateFeatureStatus('/ledConfig', false);
       }
     }
-    function closeLedColorModal() { document.getElementById('ledColorModal').hidden = true; }
+    function closeLedColorModal() { stopLdrLive(); document.getElementById('ledColorModal').hidden = true; }
+
+    /* ── Live LDR value (0.5s) shown while the LED popup is open ── */
+    let ldrTimer = null;
+    async function refreshLdr() {
+      try {
+        const d = await fetchJSON('/ldr');
+        const el = document.getElementById('ldrLive');
+        if (el) el.innerHTML = `LDR now — raw: <b>${d.raw}</b> · brightness: <b>${d.brightness}</b>`;
+      } catch (e) { /* transient: leave the last value on screen */ }
+    }
+    function startLdrLive() { stopLdrLive(); refreshLdr(); ldrTimer = setInterval(refreshLdr, 500); }
+    function stopLdrLive()  { if (ldrTimer) { clearInterval(ldrTimer); ldrTimer = null; } }
+
+    /* ── Shared live values (main panel + LED popup + calibration popup) ──
+       liveMeasures is the /offsetConfig catalogue (all measurements, whether the
+       sensor is enabled or not); /liveValues is the lightweight 3s value feed. */
+    let liveMeasures = [];
+    let liveTimer = null;
+    let lastLive = {};   // last calibrated value per measurement idx (from /liveValues)
+    const fmtLive = v => (v === null || v === undefined) ? '—' : v;
+
+    // Calibration popup row text: the raw sensor reading and the calibrated value.
+    // Firmware bakes the SAVED offset into the live value, so raw = live - savedOffset;
+    // the "calibrated" figure previews raw + the offset currently typed in the box.
+    function calRowHtml(m) {
+      const saved = Number(m.offset) || 0;
+      const calLive = (m.idx in lastLive) ? lastLive[m.idx] : m.value;
+      if (calLive === null || calLive === undefined) return 'reads: <b>—</b> · calibrated: <b>—</b>';
+      const raw = calLive - saved;
+      const inp = document.getElementById('off_val_' + m.idx);
+      const cur = inp ? (Number(inp.value) || 0) : saved;
+      return `reads: <b>${raw.toFixed(2)}</b> · calibrated: <b>${(raw + cur).toFixed(2)}</b>`;
+    }
+    function updateCalRow(idx) {
+      const m = liveMeasures.find(x => x.idx === idx);
+      const el = document.getElementById('off_live_' + idx);
+      if (m && el) el.innerHTML = calRowHtml(m);
+    }
+    function onOffsetInput(idx) { updateCalRow(idx); }   // live preview as the offset is typed
+
+    async function buildLivePanel() {
+      try {
+        liveMeasures = await fetchJSON('/offsetConfig');
+        updateFeatureStatus('/offsetConfig', true);
+      } catch (e) {
+        console.warn('/offsetConfig:', e.message);
+        updateFeatureStatus('/offsetConfig', false);
+        return;
+      }
+      const enabled = liveMeasures.filter(m => m.enabled);
+      const sec = document.getElementById('liveSection');
+      const div = document.getElementById('liveDivider');
+      const box = document.getElementById('liveReadings');
+      if (!sec || !box) return;
+      if (!enabled.length) { sec.hidden = true; if (div) div.hidden = true; return; }
+      sec.hidden = false; if (div) div.hidden = false;
+      box.innerHTML = enabled.map(m =>
+        `<div class="live-item"><div class="live-label">${m.sensorName} · ${m.label}</div>` +
+        `<div class="live-val" id="live_main_${m.idx}">${fmtLive(m.value)}</div></div>`
+      ).join('');
+    }
+
+    async function refreshLive() {
+      let vals;
+      try { vals = await fetchJSON('/liveValues'); updateFeatureStatus('/liveValues', true); }
+      catch (e) { updateFeatureStatus('/liveValues', false); return; }
+      const map = {};
+      for (const o of vals) map[o.i] = o.v;
+      lastLive = map;   // calibrated values, shared for the calibration-popup preview
+      // Main readings panel
+      for (const m of liveMeasures) {
+        const el = document.getElementById('live_main_' + m.idx);
+        if (el && (m.idx in map)) el.textContent = fmtLive(map[m.idx]);
+      }
+      // LED popup live spans (value of the measurement each LED is mapped to)
+      const ledModal = document.getElementById('ledColorModal');
+      if (ledModal && !ledModal.hidden) {
+        for (let i = 0; i < ledState.count; i++) {
+          const el = document.getElementById('lc_live_' + i);
+          if (!el) continue;
+          const mp = ledState.leds[i] ? ledState.leds[i].map : -1;
+          el.textContent = 'live: ' + fmtLive((mp >= 0 && (mp in map)) ? map[mp] : null);
+        }
+      }
+      // Calibration popup rows: show the raw reading and the calibrated value
+      const offModal = document.getElementById('offsetModal');
+      if (offModal && !offModal.hidden) {
+        for (const m of liveMeasures) {
+          const el = document.getElementById('off_live_' + m.idx);
+          if (el) el.innerHTML = calRowHtml(m);
+        }
+      }
+    }
+
+    function startLive() {
+      if (liveTimer) return;          // already running
+      refreshLive();
+      liveTimer = setInterval(refreshLive, 3000);
+    }
+
+    /* ── Sensor calibration popup (per-measurement offsets) ── */
+    async function openOffsetModal() {
+      const body = document.getElementById('offsetBody');
+      const msg = document.getElementById('offsetMsg');
+      msg.className = 'auth-msg'; msg.textContent = '';
+      body.innerHTML = 'Loading…';
+      document.getElementById('offsetModal').hidden = false;
+      try {
+        liveMeasures = await fetchJSON('/offsetConfig');
+        renderOffsetRows();
+        refreshLive();
+        updateFeatureStatus('/offsetConfig', true);
+      } catch (e) {
+        body.innerHTML = '<p class="auth-msg err">Could not load calibration.</p>';
+        updateFeatureStatus('/offsetConfig', false);
+      }
+    }
+    function closeOffsetModal() { document.getElementById('offsetModal').hidden = true; }
+
+    function renderOffsetRows() {
+      const enabled = liveMeasures.filter(m => m.enabled);
+      if (!enabled.length) {
+        document.getElementById('offsetBody').innerHTML =
+          '<p class="live-empty">No sensors enabled. Enable a sensor first (and Save), then calibrate its values.</p>';
+        return;
+      }
+      let html = '', curSensor = null;
+      for (const m of enabled) {
+        if (m.sensor !== curSensor) {
+          curSensor = m.sensor;
+          html += `<div class="cal-sensorhead">${m.sensorName}</div>`;
+        }
+        html +=
+          `<div class="cal-row">` +
+            `<span class="cal-name">${m.label} <small>offset</small></span>` +
+            `<input type="number" step="any" id="off_val_${m.idx}" value="${m.offset}" oninput="onOffsetInput(${m.idx})">` +
+            `<span class="cal-live" id="off_live_${m.idx}">${calRowHtml(m)}</span>` +
+          `</div>`;
+      }
+      document.getElementById('offsetBody').innerHTML = html;
+    }
+
+    async function saveOffsets() {
+      const msg = document.getElementById('offsetMsg');
+      const btn = document.getElementById('offsetSaveBtn');
+      // Full-length offset array indexed by measurement idx. Disabled measures keep
+      // their previously-saved offset (no input on screen) so we never zero them.
+      const maxIdx = liveMeasures.reduce((a, m) => Math.max(a, m.idx), -1);
+      const offset = new Array(maxIdx + 1).fill(0);
+      for (const m of liveMeasures) {
+        const el = document.getElementById('off_val_' + m.idx);
+        offset[m.idx] = el ? (Number(el.value) || 0) : (Number(m.offset) || 0);
+      }
+      btn.disabled = true; msg.className = 'auth-msg'; msg.textContent = 'Saving…';
+      try {
+        await fetchJSON('/offsetConfigSet', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ offset })
+        });
+        for (const m of liveMeasures) m.offset = offset[m.idx];
+        // Keep the popup open on save so you can keep tuning with the live values.
+        msg.className = 'auth-msg ok'; msg.textContent = 'Saved!';
+      } catch (e) {
+        msg.className = 'auth-msg err'; msg.textContent = 'Save failed';
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     async function saveLedColors() {
       syncLedInputs();
@@ -1254,6 +1709,10 @@
       const payload = {
         led_toggle: document.getElementById('led_toggle_cb').checked,
         ldr_toggle: document.getElementById('ldr_toggle_cb').checked,
+        ldr_ambient_min: parseInt(document.getElementById('ldr_amin_in').value, 10) || 0,
+        ldr_ambient_max: parseInt(document.getElementById('ldr_amax_in').value, 10) || 0,
+        ldr_bright_min: parseInt(document.getElementById('ldr_bmin_in').value, 10) || 0,
+        ldr_bright_max: parseInt(document.getElementById('ldr_bmax_in').value, 10) || 0,
         count: ledState.count,
         map, red, yellow, green, col1, col2, col3
       };
@@ -1263,8 +1722,8 @@
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        // Keep the popup open on save so you can keep tuning with the live values.
         msg.className = 'auth-msg ok'; msg.textContent = 'Saved!';
-        setTimeout(closeLedColorModal, 700);
       } catch (e) {
         msg.className = 'auth-msg err'; msg.textContent = 'Save failed';
       } finally {
@@ -1294,17 +1753,29 @@
       btn.disabled = true;
       const pw = document.getElementById('importPass').value;
       try {
-        const result = await fetchJSON('/importConfig', {
+        const resp = await fetch('/importConfig', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ config: pendingImport, password: pw })
         });
-        im.className = 'auth-msg ok';
-        im.textContent = (result.message || 'Imported') + ' — reconnecting…';
-        pendingImport = null;
-        setTimeout(() => location.reload(), 6000); // device restarts after import
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok) {
+          im.className = 'auth-msg ok';
+          im.textContent = (data.message || 'Imported') + ' — reconnecting…';
+          pendingImport = null;
+          setTimeout(() => location.reload(), 6000); // device restarts after import
+          return;
+        }
+        // Not imported — keep this prompt open so the correct password can be entered.
+        im.className = 'auth-msg err';
+        im.textContent = (resp.status === 401)
+          ? 'Wrong password — check it and try again'
+          : (data.message || 'Import failed (bad config file)');
+        btn.disabled = false;
+        const pf = document.getElementById('importPass');
+        pf.value = ''; pf.focus();
       } catch (e) {
         im.className = 'auth-msg err';
-        im.textContent = 'Import failed (wrong password or bad file)';
+        im.textContent = 'Import failed (network error)';
         btn.disabled = false;
       }
     }
@@ -1383,17 +1854,26 @@
         <button class="modal-close" onclick="closeLedColorModal()" title="Close">✕</button>
       </div>
       <div class="modal-body">
-        <div class="led-top">
-          <label class="led-check"><input type="checkbox" id="led_toggle_cb"> Sensor status LEDs (WS2812 on LED pin)</label>
-          <label class="led-check"><input type="checkbox" id="ldr_toggle_cb"> Auto LED brightness from LDR (on LDR pin)</label>
-          <label class="led-count">Number of LEDs
-            <input type="number" id="led_count_in" min="1" value="5" onchange="onLedCountChange()">
-          </label>
+        <div class="modal-scroll">
+          <div class="led-top">
+            <label class="led-check"><input type="checkbox" id="led_toggle_cb"> Sensor status LEDs (WS2812 on LED pin)</label>
+            <label class="led-check"><input type="checkbox" id="ldr_toggle_cb"> Auto LED brightness from LDR (on LDR pin)</label>
+            <label class="led-count">Number of LEDs
+              <input type="number" id="led_count_in" min="1" value="5" onchange="onLedCountChange()">
+            </label>
+            <div class="led-cal">
+              <label>Ambient min (bright, raw ADC)<input type="number" id="ldr_amin_in" min="0"></label>
+              <label>Ambient max (dark, raw ADC)<input type="number" id="ldr_amax_in" min="0"></label>
+              <label>Brightness min (0-255)<input type="number" id="ldr_bmin_in" min="0" max="255"></label>
+              <label>Brightness max (0-255)<input type="number" id="ldr_bmax_in" min="0" max="255"></label>
+            </div>
+            <div class="ldr-live" id="ldrLive">LDR now — raw: <b>—</b> · brightness: <b>—</b></div>
+          </div>
+          <p class="ledcolor-hint">Each LED shows a sensor, coloured by its live reading on a
+            3-step scale. Pick the sensor (picking one fills in sensible defaults), then set the
+            value <b>and colour</b> for each step — the live reading is interpolated between them.</p>
+          <div id="ledColorBody"></div>
         </div>
-        <p class="ledcolor-hint">Each LED shows a sensor, coloured by its live reading on a
-          3-step scale. Pick the sensor (picking one fills in sensible defaults), then set the
-          value <b>and colour</b> for each step — the live reading is interpolated between them.</p>
-        <div id="ledColorBody"></div>
       </div>
       <div class="modal-actions">
         <button class="btn-submit" id="ledColorSaveBtn" onclick="saveLedColors()">Save LED settings</button>
@@ -1402,6 +1882,104 @@
       </div>
     </div>
   </div>
+
+  <!-- Sensor calibration modal (per-measurement offsets, live values) -->
+  <div class="modal" id="offsetModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="section-title">Sensor Calibration</div>
+        <button class="modal-close" onclick="closeOffsetModal()" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-scroll">
+          <p class="ledcolor-hint">Add a calibration offset to any value of an enabled sensor.
+            The offset is added to the live reading (and the value reported over MQTT). Watch the
+            live value update as you tune. Set 0 for no correction.</p>
+          <div id="offsetBody"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-submit" id="offsetSaveBtn" onclick="saveOffsets()">Save calibration</button>
+        <button class="btn-config" onclick="closeOffsetModal()">Cancel</button>
+        <div class="auth-msg" id="offsetMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced settings modal (MQTT, hotspot, pins, Bluetooth bridge, etc.) -->
+  <div class="modal" id="advancedModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="section-title">Advanced Settings</div>
+        <button class="modal-close" onclick="closeAdvancedModal()" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-scroll" id="advFields"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-submit" id="advSaveBtn" onclick="saveAdvanced()">Save settings</button>
+        <button class="btn-config" onclick="closeAdvancedModal()">Close</button>
+        <div class="auth-msg" id="advMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firmware update modal: GitHub-release OTA + manual .bin upload -->
+  <div class="modal" id="updateModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="section-title">Firmware Update</div>
+        <button class="modal-close" onclick="closeUpdateModal()" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-scroll">
+          <p class="ledcolor-hint">Update over-the-air from
+            <a href="https://github.com/Nikpesu/WeatherStation/releases" target="_blank">GitHub Releases</a>,
+            or upload a <b>.bin</b> built for this board. Your settings are kept.
+            <b>Don't power off during an update.</b></p>
+
+          <div class="led-top">
+            <div class="ldr-live" id="otaVersions">Installed version: <b id="otaCurrent">—</b> · board: <b id="otaBoard">—</b></div>
+            <button type="button" class="btn-config" id="otaCheckBtn" onclick="checkOta()">☁ Check GitHub for updates</button>
+            <div class="ldr-live" id="otaStatus" style="white-space:pre-wrap;min-height:1.2em"></div>
+            <label class="led-check"><input type="checkbox" id="otaFsChk"> Also update the web UI (filesystem image)</label>
+            <button type="button" class="btn-submit" id="otaUpdateBtn" onclick="doOta()" hidden>⬇ Download &amp; install</button>
+          </div>
+
+          <p class="ledcolor-hint" style="margin-top:1rem">Manual upload (offline / advanced) — pick the file for
+            <b id="otaBoard2">this board</b> from the <i>firmware maker</i> output or a release:</p>
+          <div class="led-cal">
+            <label>Firmware <code>&lt;board&gt;-firmware.bin</code>
+              <input type="file" id="fwFile" accept=".bin">
+            </label>
+            <label>Filesystem / web UI <code>&lt;board&gt;-littlefs.bin</code>
+              <input type="file" id="fsFile" accept=".bin">
+            </label>
+          </div>
+          <div class="action-row" style="margin-top:0.6rem">
+            <button type="button" class="btn-config" onclick="uploadBin('fwFile','/updateFirmware')">⬆ Upload firmware</button>
+            <button type="button" class="btn-config" onclick="uploadBin('fsFile','/updateFilesystem')">⬆ Upload filesystem</button>
+          </div>
+          <div class="auth-msg" id="uploadMsg"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-config" onclick="closeUpdateModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Suggested-area options (dropdown + free text). HA areas aren't available over
+       MQTT, so these are common presets; any custom value is allowed. -->
+  <datalist id="areaList">
+    <option value="Outside"></option><option value="Inside"></option>
+    <option value="Living Room"></option><option value="Bedroom"></option>
+    <option value="Kitchen"></option><option value="Bathroom"></option>
+    <option value="Office"></option><option value="Garage"></option>
+    <option value="Basement"></option><option value="Attic"></option>
+    <option value="Hallway"></option><option value="Garden"></option>
+    <option value="Balcony"></option><option value="Bedroom 2"></option>
+  </datalist>
 
   <!-- Theme switcher -->
   <div class="theme-bar">
@@ -1447,9 +2025,32 @@
       <div class="auth-msg" id="loginMsg"></div>
     </div>
 
+    <!-- Change password -->
+    <div class="auth-card" id="passChangePanel" hidden>
+      <h2>🔑 Change password</h2>
+      <p>Enter your current password and choose a new one. Leave the new password blank to remove it — the site then opens straight to the homepage with no login.</p>
+      <span class="auth-label">Current password</span>
+      <input type="password" id="pcOld" placeholder="current password (blank if none)">
+      <span class="auth-label">New password</span>
+      <input type="password" id="pcNew" placeholder="new password (blank = remove)">
+      <span class="auth-label">Repeat new password</span>
+      <input type="password" id="pcNew2" placeholder="repeat new password"
+             onkeydown="if(event.key==='Enter')doPassChange()">
+      <button class="btn-submit" id="pcBtn" onclick="doPassChange()">Change password</button>
+      <button class="btn-config" onclick="location.href='/homepage'">Cancel</button>
+      <div class="auth-msg" id="pcMsg"></div>
+    </div>
+
   </div>
 
   <main class="main-card" id="mainCard" hidden>
+
+    <div class="section" id="liveSection" hidden>
+      <div class="section-title">Live Readings</div>
+      <div id="liveReadings" class="live-grid"></div>
+    </div>
+
+    <div class="divider" id="liveDivider" hidden></div>
 
     <div class="section">
       <div class="section-title">WiFi Network</div>
@@ -1475,11 +2076,13 @@
     <div class="action-row">
       <button class="btn-restore" id="refreshBtn" onclick="makeFirstFieldBlock()">↺ Restore</button>
       <button class="btn-config" id="currentConfigBtn" onclick="openConfigModal()">⎘ Current Config</button>
+      <button class="btn-config" id="fwUpdateBtn" onclick="openUpdateModal()">⬆ Firmware Update</button>
       <button class="btn-restart" id="restartBtn" onclick="restartESP()">⏻ Restart ESP</button>
     </div>
 
-    <div class="action-row" id="logoutRow" hidden>
-      <button class="btn-restart" id="logoutBtn" style="flex:1;" onclick="doLogout()">⎋ Log out</button>
+    <div class="action-row" id="accountRow">
+      <button class="btn-config" id="passChangeBtn" style="flex:1;" onclick="location.href='/passChange'">🔑 Change Password</button>
+      <button class="btn-restart" id="logoutBtn" style="flex:1;" hidden onclick="doLogout()">⎋ Log out</button>
     </div>
 
   </main>
@@ -1509,6 +2112,6 @@
   renderFeatureList();
   fetchTitles();                    // header titles + footer device-info, always
   setInterval(fetchTitles, 1000);
-  checkAuth();
+  route();                          // show login / firstsetup / homepage per URL + auth
 </script>
 </html>

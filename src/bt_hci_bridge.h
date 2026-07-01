@@ -8,9 +8,18 @@
 // On ESP32-S2 and ESP8266 these calls become no-ops.
 
 #if defined(SOC_BT_SUPPORTED)
-// Start the bridge. Call AFTER WiFi is connected.
+// Start the bridge. Call AFTER WiFi is connected. Idempotent: the BT controller
+// can only be brought up once per boot, so extra calls are ignored.
 // `port` is the TCP port the Linux host will connect to.
 void btHciBridgeBegin(uint16_t port = 6789);
+bool btHciBridgeSupported();   // this chip has a BT controller
+bool btHciBridgeRunning();     // the bridge was started this boot
+bool btHciBridgeClient();      // a host is currently attached over TCP
+uint16_t btHciBridgePort();    // TCP port the bridge listens on
 #else
 inline void btHciBridgeBegin(uint16_t = 6789) {}
+inline bool btHciBridgeSupported() { return false; }
+inline bool btHciBridgeRunning()   { return false; }
+inline bool btHciBridgeClient()    { return false; }
+inline uint16_t btHciBridgePort()  { return 0; }
 #endif

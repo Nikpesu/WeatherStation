@@ -49,6 +49,19 @@ LedMeasure ledMeasures[] = {
     {9, "Altitude",    &bmp580_alt,    "alt"}
 };
 #define MEASURE_COUNT ((int)(sizeof(ledMeasures)/sizeof(ledMeasures[0])))
+static_assert(MEASURE_COUNT <= SENSOR_MEASURE_COUNT,
+              "SENSOR_MEASURE_COUNT (WS_config.h) must be >= number of ledMeasures[] entries");
+
+// Add the per-measurement calibration offset to every live value of the given
+// sensor. Call right after a sensor's xRead() (which reassigns the globals from the
+// hardware each cycle), so the offset is applied exactly once and flows through both
+// the MQTT payload and the LED / live-readings displays. NaN readings are left alone.
+void applySensorOffset(int sensorIdx)
+{
+  for (int m = 0; m < MEASURE_COUNT; m++)
+    if (ledMeasures[m].sensor == sensorIdx && !isnan(*ledMeasures[m].value))
+      *ledMeasures[m].value += config.sensor_offset[m];
+}
 
 // (Re)initialise the strip on the currently configured pin. Called from
 // sensorsBegin(), which also runs on every WiFi reconnect, so this MUST be
@@ -110,9 +123,10 @@ uint8_t ledBrightness()
   if (smoothed < 0) smoothed = raw;
   smoothed += (raw - smoothed) * 0.2f; // exponential moving average
 
-  long b = map((long)smoothed, 0, LDR_ADC_MAX, LED_BRIGHTNESS_MAX, LED_BRIGHTNESS_MIN);
-  if (b < LED_BRIGHTNESS_MIN) b = LED_BRIGHTNESS_MIN;
-  if (b > LED_BRIGHTNESS_MAX) b = LED_BRIGHTNESS_MAX;
+  long b = map((long)smoothed, config.ldr_ambient_min, config.ldr_ambient_max,
+               config.ldr_bright_max, config.ldr_bright_min);
+  if (b < config.ldr_bright_min) b = config.ldr_bright_min;
+  if (b > config.ldr_bright_max) b = config.ldr_bright_max;
   return (uint8_t)b;
 }
 
@@ -150,6 +164,10 @@ uint32_t ledColorFromValue(float v, float v1, uint32_t c1, float v2, uint32_t c2
 // the sensor it is mapped to (config.led_map), coloured by where its live reading
 // falls on that LED's red/yellow/green value scale. Off = unmapped slot, disabled
 // sensor, or no data (NaN).
+// Set true the first time the WS2812 strip actually lights a pixel (i.e. the status
+// LEDs "turn on"). The boot-blink watches this to know when to stop blinking.
+bool ledsHaveLit = false;
+
 void ledsUpdate()
 {
   if (!led_toggle) return;
@@ -164,6 +182,7 @@ void ledsUpdate()
   leds.setBrightness(ledBrightness());
   leds.clear();
 
+  bool lit = false;
   for (int led = 0; led < config.led_count; led++)
   {
     int m = config.led_map[led];
@@ -174,6 +193,67 @@ void ledsUpdate()
     leds.setPixelColor(led, ledColorFromValue(v, config.led_red[led],    config.led_col1[led],
                                                   config.led_yellow[led], config.led_col2[led],
                                                   config.led_green[led],  config.led_col3[led]));
+    lit = true;
   }
   leds.show();
+  if (lit) ledsHaveLit = true;
+}
+
+// ── Boot blink on the onboard ESP LED ────────────────────────────────────────
+// On startup blink the ESP's own LED. If the WS2812 status LEDs are enabled, keep
+// blinking until they light up (first coloured frame); if they are disabled, just
+// blink 10 times. Non-blocking: armed by espBootBlinkBegin() and driven by
+// espBootBlinkTick() from the main loop (and the WiFi-connect wait).
+static bool espBlinkDone   = true;   // starts idle until armed
+static bool espBlinkTenMode = false; // true = blink 10x then stop (status LEDs off)
+static bool espBlinkLevel  = false;  // current logical state (true = lit)
+static int  espBlinkCount  = 0;      // completed blinks (on->off cycles)
+static unsigned long espBlinkLast  = 0;
+static unsigned long espBlinkStart = 0;
+
+inline void espLedSet(bool on)
+{
+  espBlinkLevel = on;
+#if ESP_STATUS_LED_ACTIVE_LOW
+  digitalWrite(ESP_STATUS_LED_PIN, on ? LOW : HIGH);
+#else
+  digitalWrite(ESP_STATUS_LED_PIN, on ? HIGH : LOW);
+#endif
+}
+
+void espBootBlinkBegin()
+{
+  pinMode(ESP_STATUS_LED_PIN, OUTPUT);
+  espBlinkTenMode = !led_toggle;   // status LEDs on -> blink until they light
+  espBlinkCount   = 0;
+  espBlinkLast    = millis();
+  espBlinkStart   = millis();
+  espBlinkDone    = false;
+  espLedSet(true);                 // start lit
+}
+
+void espBootBlinkTick()
+{
+  if (espBlinkDone) return;
+
+  // Stop conditions.
+  if (espBlinkTenMode)
+  {
+    if (espBlinkCount >= 10) { espLedSet(false); espBlinkDone = true; return; }
+  }
+  else
+  {
+    // Blink until the status LEDs light, with a safety cap so a misconfigured or
+    // AP-mode device never blinks forever.
+    if (ledsHaveLit || millis() - espBlinkStart > 60000UL)
+      { espLedSet(false); espBlinkDone = true; return; }
+  }
+
+  const unsigned long BLINK_MS = 150;
+  if (millis() - espBlinkLast >= BLINK_MS)
+  {
+    espBlinkLast = millis();
+    espLedSet(!espBlinkLevel);
+    if (!espBlinkLevel) espBlinkCount++;  // count each full on->off blink
+  }
 }

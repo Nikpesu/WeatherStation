@@ -72,6 +72,7 @@ void bmp280SetupSend()
     else 
     {
         bmp280Read();
+        applySensorOffset(1);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)

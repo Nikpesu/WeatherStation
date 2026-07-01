@@ -19,7 +19,10 @@ void startProgram()
     Serial.println("["+runningTime()+"] An Error has occurred while mounting LittleFS");
     return;
   }
-  loadConfig(); 
+  loadConfig();
+
+  //arm the onboard-LED boot blink (blinks until the status LEDs light, or 10x if off)
+  espBootBlinkBegin();
 
   //starting I2C interface
   Wire.begin(sda_pin,scl_pin);
@@ -38,7 +41,7 @@ void startProgram()
     wifiConnectionType=true;
     wifiStart();
     mqttConnect();
-    btHciBridgeBegin(6789);
+    if(bt_bridge_toggle) btHciBridgeBegin(6789);   // opt-in; uses lots of RAM
     sensorsBegin();
   }
 
@@ -65,6 +68,7 @@ void loopedProgram()
 {
   int timeStart;
   int timeTook;
+  espBootBlinkTick();   // drive the onboard-LED boot blink until it completes
   if(wifiConnectionType)
   {
     timeStart=millis();
@@ -138,6 +142,7 @@ void loopedProgram()
     infoString+="\n\t\tRAM free: "+(String)(ESP.getFreeHeap()/1024)+"KB"; 
     infoString+="\n\t\tIP: "+ (wifiConnectionType ? WiFi.localIP() : WiFi.softAPIP()).toString();
     infoString+="\n\t\tConnection type: " + (String)(wifiConnectionType?"WiFi":"Hotspot");
+    infoString+="\n\t\tSSID: " + (wifiConnectionType ? WiFi.SSID() : WiFi.softAPSSID());
     if(!wifiConnectionType)infoString+="\n\t\tHotspot password: " + hotspot_pass;
     infoString+="\n\t\tDefault config pin: " + (String)RESET_CONFIG_PIN;
     infoString+="\n\t\tHotspot pin: " + (String)HOTSPOT_PIN +"\n";

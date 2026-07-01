@@ -1,0 +1,2 @@
+# Generated firmware images — only the build scripts are tracked.
+*.bin

@@ -20,6 +20,8 @@ static WiFiServer        s_server(6789);
 static WiFiClient        s_client;
 static RingbufHandle_t   s_rxRing = nullptr;   // controller -> TCP (whole HCI packets)
 static volatile bool     s_clientUp = false;
+static bool              s_started = false;    // bridge/controller brought up this boot
+static uint16_t          s_port = 6789;
 
 // ---- VHCI callbacks (run in controller task context, must not block) ----
 
@@ -116,6 +118,8 @@ static void serverTask(void *) {
 // ---- public API ----
 
 void btHciBridgeBegin(uint16_t port) {
+    if (s_started) return;   // the BT controller can only be initialised once per boot
+    s_port = port;
     s_rxRing = xRingbufferCreate(8192, RINGBUF_TYPE_NOSPLIT);
 
     esp_bt_controller_config_t cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
@@ -129,6 +133,13 @@ void btHciBridgeBegin(uint16_t port) {
 
     xTaskCreatePinnedToCore(txTask,     "hci_tx", 4096, nullptr, 5, nullptr, 0);
     xTaskCreatePinnedToCore(serverTask, "hci_rx", 4096, nullptr, 5, nullptr, 0);
+
+    s_started = true;
 }
+
+bool btHciBridgeSupported() { return true; }
+bool btHciBridgeRunning()   { return s_started; }
+bool btHciBridgeClient()    { return s_clientUp; }
+uint16_t btHciBridgePort()  { return s_port; }
 
 #endif // SOC_BT_SUPPORTED

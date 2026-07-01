@@ -79,6 +79,7 @@ void pm1006kSetupSend()
     else 
     {
         pm1006kRead();
+        applySensorOffset(3);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)

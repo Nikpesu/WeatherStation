@@ -3,6 +3,7 @@
   #include "./WS_leds.h"
   #include "./WS_mqtt.h"
   #include "./WS_sensors.h"
+  #include "./WS_ota.h"
   #include "./WS_network.h"
   #include "./WS_json.h"
   #include "./WS_main.h"

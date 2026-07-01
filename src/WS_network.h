@@ -18,13 +18,33 @@ String rssiToChart(int8_t value){
   else return "[▂▁▁▁]";
 }
 
+// 302-redirect the current request to another local path.
+void redirectTo(const String &path)
+{
+  server.sendHeader("Location", path, true);
+  server.send(302, "text/plain", "");
+}
+
+// Stream index.html straight from flash in chunks. Do NOT read it into a String:
+// the page is ~70KB and file.readString() needs ~2x that as one contiguous heap
+// block, which fails on low-RAM boards (ESP32-C3) once WiFi/MQTT buffers are up —
+// producing a blank page. streamFile() sends directly with a tiny buffer.
+void serveIndex()
+{
+  File file = LittleFS.open("/index.html", "r");
+  if (!file) { server.send(500, "text/plain", "index.html not found on filesystem"); return; }
+  server.streamFile(file, "text/html");
+  file.close();
+}
+
 void httpfields()
 {
   REQUIRE_AUTH();
   //const data = [{"fieldID":"fieldID","labelText":"labelText","value":"value","placeholder":"placeholder"}];
 
   updateFieldsToString();
-  String sendingValue="[";
+  String sendingValue; sendingValue.reserve(64 + FIELD_COUNT * 96);
+  sendingValue = "[";
   for(int i=0; i<FIELD_COUNT;i++)
   {
     sendingValue+="{\"fieldID\":\""+fieldsIDNameTypePlaceholder[i][0]+"\",";
@@ -119,11 +139,16 @@ String colorToHex(uint32_t c)
 void httpLedConfig()
 {
   REQUIRE_AUTH();
-  String s = "{";
+  String s; s.reserve(512 + config.led_count * 160 + MEASURE_COUNT * 64);
+  s = "{";
   s += "\"led_toggle\":" + String(led_toggle ? "true" : "false") + ",";
   s += "\"ldr_toggle\":" + String(ldr_brightness_toggle ? "true" : "false") + ",";
   s += "\"count\":" + String(config.led_count) + ",";
   s += "\"maxCount\":" + String(LED_MAX_COUNT) + ",";
+  s += "\"ldr_ambient_min\":" + String(config.ldr_ambient_min) + ",";
+  s += "\"ldr_ambient_max\":" + String(config.ldr_ambient_max) + ",";
+  s += "\"ldr_bright_min\":" + String(config.ldr_bright_min) + ",";
+  s += "\"ldr_bright_max\":" + String(config.ldr_bright_max) + ",";
   s += "\"sensors\":[";
   for(int i=0; i<SENSOR_COUNT; i++)
   {
@@ -172,6 +197,10 @@ void httpLedConfigSet()
   }
   if(!d["led_toggle"].isNull()) led_toggle = d["led_toggle"].as<bool>();
   if(!d["ldr_toggle"].isNull()) ldr_brightness_toggle = d["ldr_toggle"].as<bool>();
+  if(!d["ldr_ambient_min"].isNull()) config.ldr_ambient_min = d["ldr_ambient_min"].as<int>();
+  if(!d["ldr_ambient_max"].isNull()) config.ldr_ambient_max = d["ldr_ambient_max"].as<int>();
+  if(!d["ldr_bright_min"].isNull())  config.ldr_bright_min  = constrain(d["ldr_bright_min"].as<int>(), 0, 255);
+  if(!d["ldr_bright_max"].isNull())  config.ldr_bright_max  = constrain(d["ldr_bright_max"].as<int>(), 0, 255);
   if(!d["count"].isNull())
   {
     int c = d["count"].as<int>();
@@ -206,6 +235,99 @@ void httpLedConfigSet()
   saveConfig();
   ledsBegin();  // apply toggle / pin / count changes live
   server.send(200, "application/json", "{\"message\": \"ok\"}");
+}
+// Lightweight live-value feed shared by the main-page readings panel and both
+// popups (LED + calibration). Polled every 3s, so it is kept minimal: only the
+// measurements whose sensor is enabled. Format: [{"i":<idx>,"v":<value|null>},...]
+void httpLiveValues()
+{
+  REQUIRE_AUTH();
+  String s; s.reserve(16 + MEASURE_COUNT * 24);
+  s = "[";
+  bool first = true;
+  for(int m=0; m<MEASURE_COUNT; m++)
+  {
+    if(!*toggles[ledMeasures[m].sensor]) continue; // only enabled sensors
+    float v = *ledMeasures[m].value;
+    s += first ? "" : ",";
+    first = false;
+    s += "{\"i\":" + String(m) + ",\"v\":" + (isnan(v) ? String("null") : String(v, 2)) + "}";
+  }
+  s += "]";
+  server.send(200, "application/json", s);
+}
+// Live LDR reading for the LED popup (polled fast, ~0.5s, while it's open): the raw
+// ADC value plus the brightness it currently maps to. Lets the user calibrate the
+// ambient min/max against what the sensor actually reads right now.
+void httpLdr()
+{
+  REQUIRE_AUTH();
+  int raw = analogRead(config.LDR_pin);
+  server.send(200, "application/json",
+    "{\"raw\":" + String(raw) + ",\"brightness\":" + String(ledBrightness()) + "}");
+}
+// Bluetooth HCI bridge status for the Advanced Settings popup.
+void httpBtStatus()
+{
+  REQUIRE_AUTH();
+  String s = "{";
+  s += "\"supported\":" + String(btHciBridgeSupported() ? "true" : "false") + ",";
+  s += "\"enabled\":"   + String(bt_bridge_toggle ? "true" : "false") + ",";   // saved config toggle
+  s += "\"running\":"   + String(btHciBridgeRunning() ? "true" : "false") + ","; // active this boot
+  s += "\"client\":"    + String(btHciBridgeClient() ? "true" : "false") + ",";
+  s += "\"port\":"      + String(btHciBridgePort());
+  s += "}";
+  server.send(200, "application/json", s);
+}
+// Static catalogue + current offsets for the sensor-calibration popup. One entry
+// per measurement: which sensor it belongs to, its label/key, whether that sensor
+// is enabled, the saved offset and the current live value.
+void httpOffsetConfig()
+{
+  REQUIRE_AUTH();
+  String s; s.reserve(32 + MEASURE_COUNT * 96);
+  s = "[";
+  for(int m=0; m<MEASURE_COUNT; m++)
+  {
+    int sIdx = ledMeasures[m].sensor;
+    float v = *ledMeasures[m].value;
+    s += "{\"idx\":" + String(m) +
+         ",\"sensor\":" + String(sIdx) +
+         ",\"sensorName\":\"" + toggleIDName[sIdx][1] + "\"" +
+         ",\"label\":\"" + ledMeasures[m].label + "\"" +
+         ",\"key\":\"" + ledMeasures[m].key + "\"" +
+         ",\"enabled\":" + String(*toggles[sIdx] ? "true" : "false") +
+         ",\"offset\":" + String(config.sensor_offset[m], 3) +
+         ",\"value\":" + (isnan(v) ? String("null") : String(v, 2)) + "}";
+    s += (m < MEASURE_COUNT-1 ? "," : "");
+  }
+  s += "]";
+  server.send(200, "application/json", s);
+}
+// Save per-measurement calibration offsets. Body: { "offset":[...] } indexed like
+// ledMeasures[]. Applied on the next read cycle; no restart needed.
+void httpOffsetConfigSet()
+{
+  REQUIRE_AUTH();
+  String body = server.hasArg("plain") ? server.arg("plain") : server.arg(0);
+  JsonDocument d;
+  if(deserializeJson(d, body))
+  {
+    server.send(400, "application/json", "{\"message\": \"bad request\"}");
+    return;
+  }
+  if(d["offset"].is<JsonArray>())
+    for(int i=0; i<MEASURE_COUNT && i<(int)d["offset"].as<JsonArray>().size(); i++)
+      config.sensor_offset[i] = d["offset"][i].as<float>();
+  saveConfig();
+  server.send(200, "application/json", "{\"message\": \"ok\"}");
+}
+// Plain-text log buffer, polled by the embedded script in /currentConfig so the
+// log refreshes live while the modal stays open.
+void httpLog()
+{
+  REQUIRE_AUTH();
+  server.send(200, "text/plain", infoString);
 }
 void httpPins()
 {
@@ -259,7 +381,8 @@ void httpConfig()
   REQUIRE_AUTH();
   updateFieldsToString();
 
-  String s = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">";
+  String s; s.reserve(4096); // pre-size to avoid repeated heap reallocations
+  s = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">";
   s += "<meta name=\"viewport\" content=\"initial-scale=1.0, width=device-width\">";
   s += "<style>";
   s += ":root,[data-theme=\"dark\"]{--bg:#0d1117;--bg2:#161b22;--bg3:#1c2330;--border:#30363d;--text:#e6edf3;--text-dim:#7d8590;--accent:#58a6ff;--accent2:#3fb950;}";
@@ -296,14 +419,25 @@ void httpConfig()
     s += "<span class=\"k\">" + pinIDName[i][0] + ":</span> <span class=\"v\">" + (String)( *(pins[i]) ) + "</span><br>";
   s += "</div>";
 
-  s += "<h2>Log</h2><textarea rows=\"10\" readonly>"+infoString+"</textarea>";
+  s += "<h2>Log</h2><textarea id=\"logbox\" rows=\"10\" readonly>"+infoString+"</textarea>";
+  // Refresh the log live (every 3s) while this view stays open. Same-origin, so it
+  // can poll /log directly. Preserve scroll position unless the user is at the bottom.
+  s += "<script>setInterval(function(){fetch('/log').then(function(r){return r.text();})"
+       ".then(function(t){var b=document.getElementById('logbox');if(!b)return;"
+       "var atBottom=b.scrollTop+b.clientHeight>=b.scrollHeight-4;b.value=t;"
+       "if(atBottom)b.scrollTop=b.scrollHeight;}).catch(function(){});},3000);</scr"
+       "ipt>";
 
   s += "<h2>Default config</h2><div class=\"box\">";
   s += "#define MDNS_HOSTNAME " + String(MDNS_HOSTNAME) + "<br>";
   s += "#define WIFI_SSID " + String(WIFI_SSID) + "<br>";
+  s += "#define WIFI_PASS redacted<br>";
   s += "#define HOTSPOT_SSID " + String(HOTSPOT_SSID) + "<br>";
+  s += "#define HOTSPOT_PASS redacted<br>";
   s += "#define MQTT_SERVER " + String(MQTT_SERVER) + "<br>";
   s += "#define MQTT_PORT " + String(MQTT_PORT) + "<br>";
+  s += "#define MQTT_USER redacted<br>";
+  s += "#define MQTT_PASSWORD redacted<br>";
   s += "#define MQTT_MESSAGEROOT " + String(MQTT_MESSAGEROOT) + "<br>";
   s += "#define SUGGESTED_AREA " + String(SUGGESTED_AREA) + "<br>";
   s += "<hr>";
@@ -357,12 +491,17 @@ void httpImportConfig()
   String cfg = req["config"].as<String>();
   String pw = req["password"].isNull() ? "" : req["password"].as<String>();
 
-  if (importConfig(cfg, pw))
+  int r = importConfig(cfg, pw);
+  if (r == 0)
   {
     server.send(200, "application/json", "{\"message\": \"config imported, restarting device\"}");
     Serial.println("["+runningTime()+"] config imported, restarting; httpImportConfig");
     delay(200);
     rst();
+  }
+  else if (r == 2)
+  {
+    server.send(401, "application/json", "{\"message\": \"wrong password\"}");
   }
   else
   {
@@ -383,6 +522,15 @@ void httpStatus()
 }
 void httpLogin()
 {
+  // GET: serve the /login page (or redirect away if it isn't the right gate).
+  if (server.method() != HTTP_POST)
+  {
+    if (!setupDone)                            { redirectTo("/firstsetup"); return; }
+    if (config_password == "" || isAuthed())   { redirectTo("/homepage"); return; }
+    serveIndex();
+    return;
+  }
+  // POST: authenticate.
   String body = server.hasArg("plain") ? server.arg("plain") : server.arg(0);
   JsonDocument d;
   if (deserializeJson(d, body))
@@ -394,7 +542,9 @@ void httpLogin()
   if (pass == config_password)
   {
     String t = createSession();
-    server.sendHeader("Set-Cookie", "ws_session=" + t + "; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax");
+    // Long-lived cookie so the login is remembered (server sessions are persisted
+    // to NVS too, so it survives reboots — see saveSessions/loadSessions).
+    server.sendHeader("Set-Cookie", "ws_session=" + t + "; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax");
     server.send(200, "application/json", "{\"message\": \"ok\"}");
   }
   else
@@ -405,13 +555,22 @@ void httpLogin()
 void httpLogout()
 {
   clearCurrentSession();
-  server.sendHeader("Set-Cookie", "ws_session=; Path=/; Max-Age=0");
-  server.send(200, "application/json", "{\"message\": \"ok\"}");
+  server.sendHeader("Set-Cookie", "ws_session=; Path=/; Max-Age=0; SameSite=Lax");
+  redirectTo("/login");   // a plain GET to /logout works: clears the session, then lands on the login page
 }
+// Handles both the /firstsetup page (GET) and the first-run setup action (POST,
+// also reachable as /setup). Available without auth because no password exists yet.
 void httpSetup()
 {
-  // First-run only: choose the master/login password (may be blank) and mark the
-  // device as set up. Available without auth because no password exists yet.
+  // GET: serve the first-run setup page (or redirect away once setup is done).
+  if (server.method() != HTTP_POST)
+  {
+    if (setupDone) { redirectTo((config_password != "" && !isAuthed()) ? "/login" : "/homepage"); return; }
+    serveIndex();
+    return;
+  }
+  // POST: first-run only — choose the master/login password (may be blank) and
+  // mark the device as set up.
   if (setupDone)
   {
     server.send(403, "application/json", "{\"message\": \"already set up\"}");
@@ -429,7 +588,57 @@ void httpSetup()
   setupDone = true;
   saveSetupDone(true);
   String t = createSession();
-  server.sendHeader("Set-Cookie", "ws_session=" + t + "; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax");
+  server.sendHeader("Set-Cookie", "ws_session=" + t + "; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax");
+  server.send(200, "application/json", "{\"message\": \"ok\"}");
+}
+// Change the login/config password. GET serves the /passChange page (must be logged
+// in on a protected site); POST { oldPassword, newPassword } verifies the old one,
+// stores the new one (blank = remove the password / open the site), and re-issues
+// the session so this client stays logged in while every other session is dropped.
+void httpPassChange()
+{
+  if (server.method() != HTTP_POST)
+  {
+    if (!setupDone)                            { redirectTo("/firstsetup"); return; }
+    if (config_password != "" && !isAuthed())  { redirectTo("/login"); return; }
+    serveIndex();
+    return;
+  }
+  if (config_password != "" && !isAuthed())
+  {
+    server.send(401, "application/json", "{\"message\": \"unauthorized\"}");
+    return;
+  }
+  String body = server.hasArg("plain") ? server.arg("plain") : server.arg(0);
+  JsonDocument d;
+  if (deserializeJson(d, body))
+  {
+    server.send(400, "application/json", "{\"message\": \"bad request\"}");
+    return;
+  }
+  String oldp = d["oldPassword"].isNull() ? "" : d["oldPassword"].as<String>();
+  String newp = d["newPassword"].isNull() ? "" : d["newPassword"].as<String>();
+  if (config_password != "" && oldp != config_password)
+  {
+    server.send(401, "application/json", "{\"message\": \"wrong old password\"}");
+    return;
+  }
+  config_password = newp;
+  saveConfig(); // re-encrypt sensitive fields with the new key + persist password to NVS
+  // Drop every existing session (other devices are logged out), then hand this
+  // client a fresh cookie — or clear it if the password was removed (site now open).
+  for (int i = 0; i < MAX_SESSIONS; i++) sessions[i] = "";
+  sessionWriteIdx = 0;
+  if (newp != "")
+  {
+    String t = createSession();
+    server.sendHeader("Set-Cookie", "ws_session=" + t + "; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax");
+  }
+  else
+  {
+    saveSessions();
+    server.sendHeader("Set-Cookie", "ws_session=; Path=/; Max-Age=0; SameSite=Lax");
+  }
   server.send(200, "application/json", "{\"message\": \"ok\"}");
 }
 void httpDefault()
@@ -441,14 +650,21 @@ void httpDefault()
   server.send(302, "text/plain", "");
   server.client().stop();
 }
+// Landing route: send a fresh visit to the right page for the current auth state.
+void httpRoot()
+{
+  if (!setupDone)                                redirectTo("/firstsetup");
+  else if (config_password != "" && !isAuthed()) redirectTo("/login");
+  else                                           redirectTo("/homepage");
+}
+
+// The main app, served at /homepage. Guard the URL so an unauthenticated visitor
+// is bounced to the correct gate (the SPA also re-checks via /status).
 void httpHome()
 {
-  //loadConfig();
-  File file = LittleFS.open("/index.html", "r");
-  String htmlContent = file.readString();
-  file.close();
-  server.send(200, "text/html", htmlContent);
-
+  if (!setupDone)                              { redirectTo("/firstsetup"); return; }
+  if (config_password != "" && !isAuthed())    { redirectTo("/login"); return; }
+  serveIndex();
 }
 
 void httpData()
@@ -491,6 +707,10 @@ void httpData()
     // LED settings are handled entirely by the LED popup (/ledConfigSet), not here.
     for(int i=0; i<FIELD_COUNT;i++)
     {
+      // The config/login password is changed only via /passChange, never here, so a
+      // form save can't accidentally wipe it (the field isn't shown on the page).
+      if (fieldsIDNameTypePlaceholder[i][0] == "config_password") continue;
+
       String value = jsonDoc[fieldsIDNameTypePlaceholder[i][0]].as<String>();
       String nochange = (String)NO_PASS_CHANGE;
 
@@ -559,7 +779,8 @@ void httpServicesStart()
   server.collectHeaders(headerKeys, 1);
 #endif
 
-  server.on("/", httpHome);
+  server.on("/", httpRoot);            // redirect to the right page for the auth state
+  server.on("/homepage", httpHome);    // the main app (guarded)
   server.on("/data", httpData);
   server.on("/restart", httpRestart);
   server.on("/titles", httpTitles);
@@ -567,16 +788,29 @@ void httpServicesStart()
   server.on("/pins", httpPins);
   server.on("/ledConfig", httpLedConfig);
   server.on("/ledConfigSet", httpLedConfigSet);
+  server.on("/liveValues", httpLiveValues);
+  server.on("/ldr", httpLdr);
+  server.on("/btStatus", httpBtStatus);
+  server.on("/offsetConfig", httpOffsetConfig);
+  server.on("/offsetConfigSet", httpOffsetConfigSet);
+  server.on("/log", httpLog);
   server.on("/currentConfig", httpConfig);
   server.on("/exportConfig", httpExportConfig);
   server.on("/importConfig", httpImportConfig);
+  // Firmware update: GitHub-release OTA + manual .bin upload (see WS_ota.h).
+  server.on("/otaCheck", httpOtaCheck);
+  server.on("/otaUpdate", HTTP_POST, httpOtaUpdate);
+  server.on("/updateFirmware", HTTP_POST, httpUpdateDone, [](){ otaHandleUpload(false); });
+  server.on("/updateFilesystem", HTTP_POST, httpUpdateDone, [](){ otaHandleUpload(true); });
   server.on("/wifi", httpWiFi);
   server.on("/fields", httpfields);
   server.on("/IDs", httpIDs);
   server.on("/status", httpStatus);
-  server.on("/login", httpLogin);
+  server.on("/login", httpLogin);        // GET: login page · POST: authenticate
+  server.on("/firstsetup", httpSetup);   // GET: first-run setup page · POST: do setup
   server.on("/logout", httpLogout);
-  server.on("/setup", httpSetup);
+  server.on("/passChange", httpPassChange); // GET: change-password page · POST: change it
+  server.on("/setup", httpSetup);        // POST: do setup (kept for compatibility)
   server.onNotFound(httpDefault);
   server.begin();
 }
@@ -673,10 +907,11 @@ void wifiStart()
     WiFi.mode(WIFI_STA);
     if(!WiFi.status()==WL_CONNECTED) WiFi.disconnect();
     connectToBestAP();
-    Serial.print("["+runningTime()+"] WI-FI starting");
+    Serial.print("["+runningTime()+"] ("+wifi_ssid+") WI-FI starting");
     while (!WiFi.isConnected() and millis()<=timeout)
     {
       delay(500);
+      espBootBlinkTick();   // keep the onboard LED blinking while WiFi connects
       Serial.print(".");
     }
     Serial.println(".");

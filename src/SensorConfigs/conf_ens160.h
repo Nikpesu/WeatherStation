@@ -72,6 +72,7 @@ void ens160SetupSend()
     else 
     {
         ens160Read();
+        applySensorOffset(2);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)

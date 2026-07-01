@@ -1,0 +1,115 @@
+name: Build & Release firmware
+
+# Build firmware + web-UI images for every board on each push to main and publish
+# them as a GitHub Release. The device's OTA updater
+# (Firmware Update → "Check GitHub for updates") reads the latest release and
+# installs the asset matching its board. Bump `SWversion` in src/WS_config.h to
+# make the release show up as an *update* on already-deployed devices.
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'firmware maker/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # one board failing must not block the others
+      matrix:
+        board:
+          - d1_mini
+          - lolin_s2_mini
+          - seeed_xiao_esp32c3
+          - seeed_xiao_esp32c6
+          - seeed_xiao_esp32s3
+          # Known not to compile (no Dx pin labels) — left out of the matrix:
+          # - esp32doit_devkit_v1
+          # - az_delivery_devkit_v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ matrix.board }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: pio-${{ matrix.board }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build firmware + filesystem
+        run: |
+          pio run -e ${{ matrix.board }}
+          pio run -e ${{ matrix.board }} -t buildfs
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p out
+          B=".pio/build/${{ matrix.board }}"
+          cp "$B/firmware.bin" "out/${{ matrix.board }}-firmware.bin"
+          for fs in littlefs.bin spiffs.bin fs.bin; do
+            if [ -f "$B/$fs" ]; then cp "$B/$fs" "out/${{ matrix.board }}-littlefs.bin"; break; fi
+          done
+          [ -f "$B/bootloader.bin" ] && cp "$B/bootloader.bin" "out/${{ matrix.board }}-bootloader.bin" || true
+          [ -f "$B/partitions.bin" ] && cp "$B/partitions.bin" "out/${{ matrix.board }}-partitions.bin" || true
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fw-${{ matrix.board }}
+          path: out/*.bin
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: always()               # publish whatever boards succeeded
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read firmware version
+        id: ver
+        run: |
+          VER=$(grep -oP 'SWversion\s*=\s*"\K[^"]+' src/WS_config.h)
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Version: $VER"
+
+      - name: Download all board artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          pattern: fw-*
+          merge-multiple: true
+
+      - name: List assets
+        run: ls -lR release_assets
+
+      - name: Publish / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: WeatherStation v${{ steps.ver.outputs.version }}
+          body: |
+            Automated build of WeatherStation firmware v${{ steps.ver.outputs.version }}.
+
+            Per board: `<board>-firmware.bin` (program) and `<board>-littlefs.bin` (web UI).
+            Update from the device page → **Firmware Update**, or flash with esptool /
+            PlatformIO. See `firmware maker/README.md`.
+
+            Commit: ${{ github.sha }}
+          files: release_assets/**/*.bin
+          fail_on_unmatched_files: false

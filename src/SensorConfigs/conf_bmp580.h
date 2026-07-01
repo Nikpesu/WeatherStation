@@ -62,6 +62,7 @@ void bmp580SetupSend()
     else
     {
         bmp580Read();
+        applySensorOffset(9);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)

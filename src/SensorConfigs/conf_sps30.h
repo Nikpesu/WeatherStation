@@ -99,6 +99,7 @@ void sps30SetupSend() {
         }
     } else {
         sps30Read();
+        applySensorOffset(8);
         String msg = "{";
         for (int i = 0; i < 3; i++) {
             msg += "\"" + SensorSuffix[i] + "\":" + String(*sensorVariables[i]) + ",";

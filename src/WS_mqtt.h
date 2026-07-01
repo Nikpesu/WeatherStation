@@ -91,8 +91,9 @@ String makeMqttSensorTopic(int i, String sensor, String status_topic, String *de
           ","
           "\"device_class\": \"" + (String)*(deviceClass+i) + "\"," // temperature, pressure, humidity, pm1, pm25...   https://www.home-assistant.io/integrations/homeassistant/#device-class
           "\"enabled_by_default\": true,"
+          // HA turns object_id into the entity_id: sensor.<object_id> ->
+          // e.g. sensor.sht31_temperature_wsnikosoba
           "\"object_id\": \""  + sensor + "_" + (String)*(SensorSuffix+i)+ "_" + mdns_hostname  + "\"," // sps30_pm1_0_wstestHostname
-          "\"object_name\": \""  + sensor + "_" + (String)*(SensorSuffix+i)+ "_" + mdns_hostname  + "\"," // sps30_pm1_0_wstestHostname
           "\"name\": \""  + sensor + " " + (String)*(SensorSuffix+i)+ "\"," // sps30_pm1_0_wstestHostname
           "\"origin\": {"
             "\"name\": \"Weatherstation\","
@@ -101,7 +102,12 @@ String makeMqttSensorTopic(int i, String sensor, String status_topic, String *de
           "}"
           ","
           "\"unit_of_measurement\": \""+ (String)*(unitOfMeasurement+i) +"\"," // C*, RH%...
-          "\"unique_id\": \"" + UniqueDeviceID + "_" + sensor + "_" + mdns_hostname + "_" + (String)*(SensorSuffix+i)+  "\"," // xxxxx_sps30_wstestHostname_pm1_0
+          // NOTE: bumping the DISCOVERY_UID_VER suffix forces Home Assistant to treat
+          // these as brand-new entities, so a stale entity_id (kept in HA's registry
+          // keyed by unique_id, even after deleting the device) is dropped and the
+          // entity_id is rebuilt from object_id above. Bump it again if you ever need
+          // another clean rename.
+          "\"unique_id\": \"" + UniqueDeviceID + "_" + sensor + "_" + mdns_hostname + "_" + (String)*(SensorSuffix+i) + "_" + DISCOVERY_UID_VER + "\"," // xxxxx_sps30_wstestHostname_pm1_0_v2
           "\"value_template\": \"{{ value_json."+ (String)*(SensorSuffix+i)+" }}\"," // value_json.pm1_0 ...
           "\"state_topic\": \""+mqtt_messageRoot+"/"+sensor+"\"," // wstest1/sps30
           "\"state_class\": \"measurement\""

@@ -123,6 +123,7 @@ void pmsx003SetupSend()
     else 
     {
         pmsx003Read();
+        applySensorOffset(4);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)

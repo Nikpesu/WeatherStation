@@ -64,6 +64,7 @@ void sht31SetupSend()
     else 
     {
         sht31Read();
+        applySensorOffset(7);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)

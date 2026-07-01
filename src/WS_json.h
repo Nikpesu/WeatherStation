@@ -128,6 +128,21 @@ String decryptString(const String &stored, const String &pass)
   return out;
 }
 
+// Heuristic used to verify an import password on backups that lack the pw_check
+// token: a correctly-decrypted field is readable text, whereas a wrong AES-CTR key
+// yields random bytes. Any NUL or control character (other than tab/newline/CR)
+// means the decryption — and therefore the password — is wrong.
+bool decryptedLooksWrong(const String &s)
+{
+  for (size_t i = 0; i < s.length(); i++)
+  {
+    uint8_t c = (uint8_t)s[i];
+    if (c == 0) return true;
+    if (c < 0x20 && c != '\t' && c != '\n' && c != '\r') return true;
+  }
+  return false;
+}
+
 // Persist / restore the config password to NVS (ESP32) or a key file (ESP8266)
 // so it survives reboots and (on ESP32) a filesystem-erasing firmware flash.
 void saveConfigPassword(const String &pass)
@@ -200,6 +215,52 @@ bool isAuthed()
   return validToken(sessionCookie());
 }
 
+// Persist the session tokens so a login is remembered across reboots. Tokens are
+// stored newline-joined; the cookie's own Max-Age bounds how long a login lasts.
+void saveSessions()
+{
+#if defined(ESP32)
+  Preferences prefs;
+  prefs.begin("ws_creds", false);
+  String blob;
+  for (int i = 0; i < MAX_SESSIONS; i++) { blob += sessions[i]; blob += "\n"; }
+  prefs.putString("sessblob", blob);
+  prefs.putInt("sessidx", sessionWriteIdx);
+  prefs.end();
+#elif defined(ESP8266)
+  File f = LittleFS.open("/sessions.txt", "w");
+  if (f) { for (int i = 0; i < MAX_SESSIONS; i++) f.println(sessions[i]); f.close(); }
+#endif
+}
+
+// Reload persisted session tokens at boot (called from loadConfig).
+void loadSessions()
+{
+#if defined(ESP32)
+  Preferences prefs;
+  prefs.begin("ws_creds", true);
+  String blob = prefs.getString("sessblob", "");
+  sessionWriteIdx = prefs.getInt("sessidx", 0) % MAX_SESSIONS;
+  prefs.end();
+  int idx = 0, start = 0;
+  while (idx < MAX_SESSIONS)
+  {
+    int nl = blob.indexOf('\n', start);
+    if (nl < 0) break;
+    sessions[idx++] = blob.substring(start, nl);
+    start = nl + 1;
+  }
+#elif defined(ESP8266)
+  File f = LittleFS.open("/sessions.txt", "r");
+  if (f)
+  {
+    for (int i = 0; i < MAX_SESSIONS && f.available(); i++)
+    { String line = f.readStringUntil('\n'); line.trim(); sessions[i] = line; }
+    f.close();
+  }
+#endif
+}
+
 // Hand out a new random session token (oldest is evicted when full).
 String createSession()
 {
@@ -208,6 +269,7 @@ String createSession()
   String t = toHex(r, 16);
   sessions[sessionWriteIdx] = t;
   sessionWriteIdx = (sessionWriteIdx + 1) % MAX_SESSIONS;
+  saveSessions();   // remember the login across reboots
   return t;
 }
 
@@ -218,6 +280,7 @@ void clearCurrentSession()
   if (t == "") return;
   for (int i = 0; i < MAX_SESSIONS; i++)
     if (sessions[i] == t) sessions[i] = "";
+  saveSessions();
 }
 
 // Persist / read the "first-run setup completed" flag.
@@ -248,6 +311,27 @@ bool loadSetupDone()
 #endif
 }
 
+// Mirror the whole /config.json into NVS (ESP32). A filesystem-erasing flash
+// (uploadfs / OTA filesystem image) wipes /config.json, so we call this right
+// before such a flash; loadConfig() restores the file from NVS on the next boot,
+// preserving every setting across the update. No-op on ESP8266 (no NVS; an FS
+// flash there also wipes the key file, so only a firmware-only flash keeps settings).
+void backupConfigToNVS()
+{
+#if defined(ESP32)
+  File f = LittleFS.open(JSON_FILE_PATH, "r");
+  if (!f) return;
+  String c = f.readString();
+  f.close();
+  if (c.length() == 0) return;
+  Preferences prefs;
+  prefs.begin("ws_creds", false);
+  prefs.putString("cfgjson", c);
+  prefs.end();
+  Serial.println("[" + runningTime() + "] config mirrored to NVS; backupConfigToNVS");
+#endif
+}
+
 void loadConfig()
 {
   // The config password lives in NVS / key file, never in /config.json. Load it
@@ -255,6 +339,7 @@ void loadConfig()
   // config gets encrypted with the right key).
   config_password = loadConfigPassword();
   setupDone = loadSetupDone();
+  loadSessions();   // restore remembered logins so a reboot doesn't log everyone out
 
   // Check if JSON exists, if not make a new one
   if (!LittleFS.exists(JSON_FILE_PATH) || !digitalRead(RESET_CONFIG_PIN))
@@ -263,7 +348,8 @@ void loadConfig()
 
     // A hardware config reset also clears the password and setup flag, so a
     // forgotten password can never lock the user out of the device.
-    if (!digitalRead(RESET_CONFIG_PIN))
+    bool hwReset = !digitalRead(RESET_CONFIG_PIN);
+    if (hwReset)
     {
       config_password = "";
       saveConfigPassword("");
@@ -271,19 +357,40 @@ void loadConfig()
       saveSetupDone(false);
       Serial.println("["+runningTime()+"] auth reset by config pin; loadConfig");
     }
+
+    bool restored = false;
     #if defined(ESP32)
-    // Restore WiFi credentials from NVS before writing defaults so the
-    // device reconnects after a firmware flash that erased LittleFS.
-    Preferences prefs;
-    prefs.begin("ws_creds", true);
-    if (prefs.isKey("ssid")) {
-      wifi_ssid = prefs.getString("ssid", wifi_ssid);
-      wifi_pass = prefs.getString("pass", wifi_pass);
-      Serial.println("["+runningTime()+"] WiFi credentials restored from NVS; loadConfig");
+    {
+      // A firmware flash that erased LittleFS drops /config.json, but NVS survives.
+      // Unless the user is doing a hardware config reset, restore the whole config
+      // from the NVS mirror (backupConfigToNVS) so no settings are lost across an
+      // update; fall back to at least the WiFi creds if there's no full backup.
+      Preferences prefs;
+      prefs.begin("ws_creds", false);   // read-write: may need to clear on reset
+      if (hwReset)
+      {
+        prefs.remove("cfgjson");        // a hardware reset must truly forget settings
+      }
+      else
+      {
+        String c = prefs.getString("cfgjson", "");
+        if (c.length())
+        {
+          File f = LittleFS.open(JSON_FILE_PATH, "w");
+          if (f) { f.print(c); f.close(); restored = true;
+            Serial.println("["+runningTime()+"] config restored from NVS backup; loadConfig"); }
+        }
+      }
+      if (!restored && prefs.isKey("ssid")) {
+        wifi_ssid = prefs.getString("ssid", wifi_ssid);
+        wifi_pass = prefs.getString("pass", wifi_pass);
+        Serial.println("["+runningTime()+"] WiFi credentials restored from NVS; loadConfig");
+      }
+      prefs.end();
     }
-    prefs.end();
     #endif
-    saveConfig();
+
+    if (!restored) saveConfig();
     Serial.println("["+runningTime()+"] new config made; loadConfig");
   }
 
@@ -375,6 +482,15 @@ void loadConfig()
       if(json["led_col3"].is<JsonArray>())
         for(int i=0; i<LED_MAX_COUNT && i<(int)json["led_col3"].as<JsonArray>().size(); i++)
           config.led_col3[i]=json["led_col3"][i].as<uint32_t>();
+      // LDR auto-brightness calibration
+      if(!json["ldr_ambient_min"].isNull()) config.ldr_ambient_min = json["ldr_ambient_min"].as<int>();
+      if(!json["ldr_ambient_max"].isNull()) config.ldr_ambient_max = json["ldr_ambient_max"].as<int>();
+      if(!json["ldr_bright_min"].isNull())  config.ldr_bright_min  = json["ldr_bright_min"].as<int>();
+      if(!json["ldr_bright_max"].isNull())  config.ldr_bright_max  = json["ldr_bright_max"].as<int>();
+      // Per-measurement calibration offsets (indexed like ledMeasures[])
+      if(json["sensor_offset"].is<JsonArray>())
+        for(int i=0; i<MEASURE_COUNT && i<(int)json["sensor_offset"].as<JsonArray>().size(); i++)
+          config.sensor_offset[i]=json["sensor_offset"][i].as<float>();
       updateFieldsToNative();
       //serializeJson(json, Serial); Serial.println();
     }
@@ -434,6 +550,17 @@ void buildConfigJson(JsonDocument &json)
     ledC2.add(config.led_col2[i]);
     ledC3.add(config.led_col3[i]);
   }
+  // LDR auto-brightness calibration
+  json["ldr_ambient_min"] = config.ldr_ambient_min;
+  json["ldr_ambient_max"] = config.ldr_ambient_max;
+  json["ldr_bright_min"]  = config.ldr_bright_min;
+  json["ldr_bright_max"]  = config.ldr_bright_max;
+  // Per-measurement calibration offsets (indexed like ledMeasures[])
+  JsonArray sensorOff = json["sensor_offset"].to<JsonArray>();
+  for(int i=0; i<MEASURE_COUNT; i++)
+    sensorOff.add(config.sensor_offset[i]);
+  // Password-check token: lets an import verify the supplied password (see importConfig).
+  json["pw_check"] = encryptString(CONFIG_PW_CHECK, config_password);
 }
 
 // Function to save the configuration to the JSON file
@@ -485,6 +612,7 @@ void updateFieldsToString()
   mqtt_port_str = String(mqtt_port);
   lowPowerMode_toggle_str = String(lowPowerMode_toggle);
   refreshTime_str = String(refreshTime);
+  bt_bridge_toggle_str = String(bt_bridge_toggle);
 }
 
 void updateFieldsToNative()
@@ -492,6 +620,7 @@ void updateFieldsToNative()
   mqtt_port=mqtt_port_str.toInt();
   lowPowerMode_toggle=(lowPowerMode_toggle_str=="true"? true : false);
   refreshTime = refreshTime_str.toInt();
+  bt_bridge_toggle=(bt_bridge_toggle_str=="true"? true : false);
 }
 
 // Export the current configuration as a JSON string (used for backup/download).
@@ -519,14 +648,44 @@ String exportConfig()
 // the one the backup's sensitive fields were encrypted with; the device adopts
 // it as its own config password so the imported secrets stay decryptable.
 // Returns false on parse error.
-bool importConfig(String jsonStr, String password)
+// Returns: 0 = imported, 1 = bad/unparseable file, 2 = wrong password.
+int importConfig(String jsonStr, String password)
 {
   JsonDocument json;
   DeserializationError error = deserializeJson(json, jsonStr);
   if (error)
   {
     Serial.println("["+runningTime()+"] Failed to parse imported config; importConfig");
-    return false;
+    return 1;
+  }
+
+  // Verify the supplied password BEFORE touching anything, so a wrong password
+  // never applies garbage or restarts the device.
+  if (!json["pw_check"].isNull())
+  {
+    // Exports made by this firmware carry a check token — a definitive test.
+    if (decryptString(json["pw_check"].as<String>(), password) != CONFIG_PW_CHECK)
+    {
+      Serial.println("["+runningTime()+"] wrong import password; importConfig");
+      return 2;
+    }
+  }
+  else
+  {
+    // Older backups have no token: best-effort verification by decrypting the
+    // encrypted sensitive fields — a wrong key turns them into control-char garbage.
+    for (int i = 0; i < FIELD_COUNT; i++)
+    {
+      String id = fieldsIDNameTypePlaceholder[i][0];
+      if (id == "config_password" || !isSensitiveField(id) || json[id].isNull()) continue;
+      String stored = json[id].as<String>();
+      if (!stored.startsWith("enc:")) continue;
+      if (decryptedLooksWrong(decryptString(stored, password)))
+      {
+        Serial.println("["+runningTime()+"] wrong import password (no token); importConfig");
+        return 2;
+      }
+    }
   }
 
   // Decrypt the incoming sensitive fields with the password the file was
@@ -604,5 +763,5 @@ bool importConfig(String jsonStr, String password)
   saveSetupDone(true);
   json.clear();
   loadConfig();
-  return true;
+  return 0;
 }

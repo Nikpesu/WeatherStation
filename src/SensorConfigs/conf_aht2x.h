@@ -69,6 +69,7 @@ void aht2xSetupSend()
     else 
     {
         aht2xRead();
+        applySensorOffset(0);
 
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
