@@ -21,6 +21,12 @@ void startProgram()
   }
   loadConfig();
 
+  // Low-heat mode: run the CPU at 160 MHz instead of 240 so the small XIAO
+  // boards dissipate less heat (Wi-Fi modem sleep is enabled in wifiStart).
+  #if defined(ESP32)
+    if(low_heat_toggle) setCpuFrequencyMhz(160);
+  #endif
+
   //arm the onboard-LED boot blink (blinks until the status LEDs light, or 10x if off)
   espBootBlinkBegin();
 
@@ -139,7 +145,11 @@ void loopedProgram()
       LittleFS.info(fs_info);
       infoString+="\n\t\tFS use: "+(String)(fs_info.usedBytes/1024)+"KB/"+(String)(fs_info.totalBytes/1024)+"KB"; 
     #endif
-    infoString+="\n\t\tRAM free: "+(String)(ESP.getFreeHeap()/1024)+"KB"; 
+    infoString+="\n\t\tRAM free: "+(String)(ESP.getFreeHeap()/1024)+"KB";
+    #if defined(ESP32)
+      infoString+="\n\t\tChip temp: "+String(temperatureRead(),1)+" °C";
+    #endif
+    infoString+="\n\t\tFirmware: v"+SWversion+" (HW "+HWversion+", "+FW_BOARD+")";
     infoString+="\n\t\tIP: "+ (wifiConnectionType ? WiFi.localIP() : WiFi.softAPIP()).toString();
     infoString+="\n\t\tConnection type: " + (String)(wifiConnectionType?"WiFi":"Hotspot");
     infoString+="\n\t\tSSID: " + (wifiConnectionType ? WiFi.SSID() : WiFi.softAPSSID());

@@ -613,14 +613,18 @@ void updateFieldsToString()
   lowPowerMode_toggle_str = String(lowPowerMode_toggle);
   refreshTime_str = String(refreshTime);
   bt_bridge_toggle_str = String(bt_bridge_toggle);
+  low_heat_toggle_str = String(low_heat_toggle);
 }
 
 void updateFieldsToNative()
 {
+  // Checkbox mirrors can arrive as "true"/"false" (POST) or "1"/"0" (String(bool)),
+  // so accept both.
   mqtt_port=mqtt_port_str.toInt();
-  lowPowerMode_toggle=(lowPowerMode_toggle_str=="true"? true : false);
+  lowPowerMode_toggle=(lowPowerMode_toggle_str=="true" || lowPowerMode_toggle_str=="1");
   refreshTime = refreshTime_str.toInt();
-  bt_bridge_toggle=(bt_bridge_toggle_str=="true"? true : false);
+  bt_bridge_toggle=(bt_bridge_toggle_str=="true" || bt_bridge_toggle_str=="1");
+  low_heat_toggle=(low_heat_toggle_str=="true" || low_heat_toggle_str=="1");
 }
 
 // Export the current configuration as a JSON string (used for backup/download).

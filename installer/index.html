@@ -45,6 +45,9 @@
   <header>
     <h1>🌦️ <span class="g">WeatherStation</span> Web Installer</h1>
     <p class="sub">Flash, update and debug your device from the browser — no IDE, no drivers.</p>
+    <label style="display:inline-flex;align-items:center;gap:.45rem;margin-top:.6rem;color:var(--dim);cursor:pointer;">
+      <input type="checkbox" id="advToggle"> Advanced (custom <code>secrets.h</code>)
+    </label>
   </header>
 
   <!-- 1. INSTALL -->
@@ -64,6 +67,45 @@
     <div class="note">Installing does a full erase, so it also clears saved settings on the device.
       To keep your settings, update from the device's own page (<b>⬆ Firmware Update</b>) or with the
       per-file uploader instead.</div>
+  </div>
+
+  <!-- ADVANCED: secrets.h generator -->
+  <div class="card" id="advCard" hidden>
+    <h2>🔧 Custom <code>secrets.h</code></h2>
+    <p class="hint">Bake your Wi-Fi/MQTT defaults + enabled sensors into the firmware at
+      <b>build time</b>. Fill the fields (they update the file live), tweak the text if you like, then
+      <b>Download</b> it into the project root and build from source.</p>
+    <div class="note" style="margin:0 0 1rem">
+      ℹ️ The one-click <b>Install</b> above flashes a prebuilt binary and <b>can't</b> embed these —
+      for a flashed device, just set everything in its Wi-Fi setup portal after install. This generator
+      is for people building from source (<code>pio run</code>).
+    </div>
+
+    <div id="secForm" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem;">
+      <label>Wi-Fi SSID<input type="text" id="s_WIFI_SSID"></label>
+      <label>Wi-Fi password<input type="text" id="s_WIFI_PASS"></label>
+      <label>MQTT server<input type="text" id="s_MQTT_SERVER" placeholder="192.168.1.10"></label>
+      <label>MQTT port<input type="text" id="s_MQTT_PORT" value="1883"></label>
+      <label>MQTT user<input type="text" id="s_MQTT_USER"></label>
+      <label>MQTT password<input type="text" id="s_MQTT_PASSWORD"></label>
+      <label>MQTT message root<input type="text" id="s_MQTT_MESSAGEROOT" value="WeatherStations/ws1"></label>
+      <label>mDNS hostname<input type="text" id="s_MDNS_HOSTNAME" value="ws1"></label>
+      <label>Hotspot SSID<input type="text" id="s_HOTSPOT_SSID" value="ws1"></label>
+      <label>Hotspot password<input type="text" id="s_HOTSPOT_PASS" value="12345678"></label>
+      <label>Suggested area<input type="text" id="s_SUGGESTED_AREA" placeholder="Living Room"></label>
+      <label>Refresh time (s)<input type="text" id="s_REFRESH_TIME" value="30"></label>
+    </div>
+
+    <p class="hint" style="margin:1rem 0 .3rem">Enabled sensors &amp; options:</p>
+    <div id="secToggles" class="chips" style="gap:.3rem .9rem"></div>
+
+    <p class="hint" style="margin:1rem 0 .3rem">Generated <code>secrets.h</code> (editable):</p>
+    <textarea id="secOut" spellcheck="false" style="width:100%;height:300px;background:#05070c;border:1px solid var(--border);border-radius:10px;color:#c9d7e6;font-family:ui-monospace,Consolas,monospace;font-size:.82rem;padding:.7rem;"></textarea>
+    <div class="row" style="margin-top:.6rem">
+      <button id="secDownload" class="btn-primary">⬇ Download secrets.h</button>
+      <button id="secCopy">📋 Copy</button>
+      <button id="secReset">↺ Reset to fields</button>
+    </div>
   </div>
 
   <!-- 2. SERIAL DEBUG / LOG -->
@@ -165,6 +207,45 @@
   function normHost(){let h=$('host').value.trim();if(!h)return null;if(!/^https?:\/\//.test(h))h='http://'+h;return h.replace(/\/+$/,'');}
   $('openUi').onclick=()=>{const h=normHost();if(h)window.open(h+'/homepage','_blank');};
   $('openLog').onclick=()=>{const h=normHost();if(h)window.open(h+'/currentConfig','_blank');};
+
+  /* ---- Advanced: secrets.h generator ---- */
+  const SENS=['LOWPOWERMODE','AHT2X','BMP280','BMP580','ENS160','PM1006K','PMSX003','SCD4X','SGP30','SHT31','SPS30'];
+  $('advToggle').addEventListener('change',e=>{$('advCard').hidden=!e.target.checked;});
+  // render sensor/option toggles
+  (function(){const tc=$('secToggles');SENS.forEach(n=>{const l=document.createElement('label');
+    l.style.cssText='color:var(--dim);display:inline-flex;align-items:center;gap:.3rem';
+    l.innerHTML='<input type="checkbox" id="t_'+n+'"> '+(n==='LOWPOWERMODE'?'LOW-POWER':n);tc.appendChild(l);});})();
+  const sval=id=>{const e=$('s_'+id);return e?e.value:'';};
+  const q=v=>'"'+String(v).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
+  const tog=n=>{const e=$('t_'+n);return e&&e.checked?'true':'false';};
+  function genSecrets(){
+    let t='#define NO_PASS_CHANGE "__*passwordDidNotChange*__"\n\n';
+    t+='#define WIFI_PASS '+q(sval('WIFI_PASS'))+'\n';
+    t+='#define HOTSPOT_PASS '+q(sval('HOTSPOT_PASS'))+'\n';
+    t+='#define MQTT_USER '+q(sval('MQTT_USER'))+'\n';
+    t+='#define MQTT_PASSWORD '+q(sval('MQTT_PASSWORD'))+'\n\n';
+    t+='#define MDNS_HOSTNAME '+q(sval('MDNS_HOSTNAME'))+'\n';
+    t+='#define WIFI_SSID '+q(sval('WIFI_SSID'))+'\n';
+    t+='#define HOTSPOT_SSID '+q(sval('HOTSPOT_SSID'))+'\n';
+    t+='#define MQTT_SERVER '+q(sval('MQTT_SERVER'))+'\n';
+    t+='#define MQTT_PORT '+(sval('MQTT_PORT')||'1883')+'\n';
+    t+='#define MQTT_MESSAGEROOT '+q(sval('MQTT_MESSAGEROOT'))+'\n';
+    t+='#define SUGGESTED_AREA '+q(sval('SUGGESTED_AREA'))+'\n\n';
+    t+='#define LOOP_TIME 100 //in ms (for looped program)\n';
+    t+='#define REFRESH_TIME '+(sval('REFRESH_TIME')||'30')+' //in s (for sensors)\n\n';
+    SENS.forEach(n=>{t+='#define '+n+'_TOGGLE '+tog(n)+'\n';});
+    return t;
+  }
+  const secOut=$('secOut');
+  const regen=()=>{secOut.value=genSecrets();};
+  $('secForm').addEventListener('input',regen);
+  $('secToggles').addEventListener('input',regen);
+  $('secReset').onclick=regen;
+  $('secDownload').onclick=()=>{const b=new Blob([secOut.value],{type:'text/plain'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='secrets.h';a.click();URL.revokeObjectURL(a.href);};
+  $('secCopy').onclick=async()=>{try{await navigator.clipboard.writeText(secOut.value);
+    const b=$('secCopy');b.textContent='✓ Copied';setTimeout(()=>b.textContent='📋 Copy',1400);}catch(e){}};
+  regen();
 </script>
 </body>
 </html>

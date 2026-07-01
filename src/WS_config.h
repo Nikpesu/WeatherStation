@@ -400,6 +400,9 @@ struct WSConfig {
   // Bluetooth HCI-over-TCP bridge (esp_bt controller exposed on a TCP port).
   // Off by default; uses significant RAM and needs a restart to (de)activate.
   bool bt_bridge_toggle = false;
+  // Low-heat mode: drop the CPU to 160 MHz + enable Wi-Fi modem sleep so the
+  // board runs cooler (helps the tiny XIAO S3/C6). Off by default; needs a restart.
+  bool low_heat_toggle = false;
 
   // sensor status-indicator LEDs (WS2812)
   bool led_toggle = LED_INDICATOR_TOGGLE;
@@ -489,6 +492,7 @@ bool &lowPowerMode_toggle = config.lowPowerMode_toggle;
 int &refreshTime = config.refreshTime;
 String &suggested_area = config.suggested_area;
 bool &bt_bridge_toggle = config.bt_bridge_toggle;
+bool &low_heat_toggle = config.low_heat_toggle;
 bool &led_toggle = config.led_toggle;
 bool &ldr_brightness_toggle = config.ldr_brightness_toggle;
 String &config_password = config.config_password;
@@ -510,12 +514,13 @@ String mqtt_port_str = String(mqtt_port);
 String lowPowerMode_toggle_str = String(lowPowerMode_toggle);
 String refreshTime_str = String(refreshTime);
 String bt_bridge_toggle_str = String(bt_bridge_toggle);
+String low_heat_toggle_str = String(low_heat_toggle);
 String test = "1";
 
 // NOTE: the LED toggles (led_toggle, ldr_brightness_toggle) and all other LED
 // settings are NOT in this list — they live entirely in the LED popup and are
 // persisted directly by buildConfigJson()/loadConfig().
-#define FIELD_COUNT 15
+#define FIELD_COUNT 16
 String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"wifi_ssid", "Wifi SSID:", "text", "SSID"},
     {"wifi_pass", "Wifi Password:", "password", "password"},
@@ -531,6 +536,7 @@ String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"refreshTime", "Refresh Time:", "number", "default: 30"},
     {"suggested_area", "Suggested area:", "text", "for example: Outside, Inside, Bedroom..."},
     {"bt_bridge_toggle", "Bluetooth HCI bridge (TCP, needs restart)", "checkbox", ""},
+    {"low_heat_toggle", "Reduce heat (160 MHz CPU + Wi-Fi modem sleep, needs restart)", "checkbox", ""},
     {"config_password", "Config Password (encrypts stored secrets, leave blank for none):", "password", "password"}
 };
 String* fields[FIELD_COUNT] = {
@@ -548,6 +554,7 @@ String* fields[FIELD_COUNT] = {
     &refreshTime_str,
     &suggested_area,
     &bt_bridge_toggle_str,
+    &low_heat_toggle_str,
     &config_password
 };
 

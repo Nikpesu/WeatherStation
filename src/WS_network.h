@@ -50,11 +50,15 @@ void httpfields()
     sendingValue+="{\"fieldID\":\""+fieldsIDNameTypePlaceholder[i][0]+"\",";
     sendingValue+="\"labelText\":\""+fieldsIDNameTypePlaceholder[i][1]+"\",";
     sendingValue+="\"type\":\""+fieldsIDNameTypePlaceholder[i][2]+"\",";
-    sendingValue+="\"placeholder\":\""+fieldsIDNameTypePlaceholder[i][3]+"\",";
-    if(fieldsIDNameTypePlaceholder[i][2]=="password")
-      sendingValue+="\"value\":\""+((String)NO_PASS_CHANGE)+"\"}";
-    else
+    if(fieldsIDNameTypePlaceholder[i][2]=="password"){
+      // Never send the real password to the browser: show an empty field with a
+      // hint. A blank value on save means "keep the current password" (httpData).
+      sendingValue+="\"placeholder\":\"leave blank = no change\",";
+      sendingValue+="\"value\":\"\"}";
+    } else {
+      sendingValue+="\"placeholder\":\""+fieldsIDNameTypePlaceholder[i][3]+"\",";
       sendingValue+="\"value\":\""+((String)*(fields[i]))+"\"}";
+    }
     sendingValue+=(i<FIELD_COUNT-1? ",":"");
   }
 
@@ -715,9 +719,9 @@ void httpData()
       String nochange = (String)NO_PASS_CHANGE;
 
       if (fieldsIDNameTypePlaceholder[i][2] == "password") {
-          if (value != nochange) {
+          // Blank field (or the legacy sentinel) = keep the existing password.
+          if (value != "" && value != nochange) {
               *(fields[i]) = value;
-          } else {
           }
       } else {
           *(fields[i]) = value;
@@ -917,6 +921,11 @@ void wifiStart()
     Serial.println(".");
   }while(WiFi.status() != WL_CONNECTED);
   Serial.println("\n["+runningTime()+"] WI-FI started!");
+
+  // Low-heat mode: enable Wi-Fi modem sleep so the radio idles between beacons.
+  #if defined(ESP32)
+    if(low_heat_toggle) WiFi.setSleep(true);
+  #endif
 
 
   //dns
