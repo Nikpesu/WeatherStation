@@ -80,17 +80,24 @@ bool otaFetchLatest(String &tag, String &fwUrl, String &fsUrl, String &err)
     return false;
   }
 
-  // Filter the (large) release JSON down to just the fields we need, so the whole
-  // response never has to fit in RAM at once.
+  // GitHub sends a large (~38KB) JSON. Read the whole body first — HTTPClient
+  // handles the blocking/transfer decoding — then filter-parse it from memory.
+  // Deserializing straight off the TLS stream is unreliable here: a momentary
+  // network stall makes ArduinoJson see EOF early ("IncompleteInput").
+  String payload = https.getString();
+  https.end();
+  if (payload.length() == 0) { err = "empty response"; return false; }
+
+  // Filter the release JSON down to just the fields we need, so only the small
+  // filtered document is retained (the transient payload String is freed after).
   JsonDocument filter;
   filter["tag_name"] = true;
   filter["assets"][0]["name"] = true;
   filter["assets"][0]["browser_download_url"] = true;
 
   JsonDocument rel;
-  DeserializationError jerr = deserializeJson(rel, https.getStream(),
+  DeserializationError jerr = deserializeJson(rel, payload,
                                               DeserializationOption::Filter(filter));
-  https.end();
   if (jerr) { err = String("json ") + jerr.c_str(); return false; }
 
   tag = rel["tag_name"].as<String>();
