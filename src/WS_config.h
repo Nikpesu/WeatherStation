@@ -682,7 +682,7 @@ float sps30_pm1_0 = nan(""), sps30_pm2_5 = nan(""), sps30_pm10_0 = nan("");
 #endif
 
 //TODO update sw/hw version
-String SWversion="3.4.0"; //software version
+String SWversion="3.4.1"; //software version bump this when you change the firmware, so the user can see if they are up to date
 String HWversion="0.1"; //hardware version
 String Model="Weatherstation";
 String ModelID=device; //ESP32, SEEED_XIAO_ESP32C3... 
