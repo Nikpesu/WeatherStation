@@ -1,272 +1,306 @@
-# ESP32/ESP8266 MQTT WeatherStation for Home Assistant
+<h1 align="center">🌦️ WeatherStation</h1>
 
-This project is designed for **ESP32** and **ESP8266** microcontrollers. It uses **MQTT** to send data to **Home Assistant** via the MQTT integration.
+<p align="center">
+  <b>A self-hosted air-quality & weather station for ESP32 / ESP8266,<br>
+  with a full web UI, encrypted config, status LEDs and native Home Assistant integration over MQTT.</b>
+</p>
 
-## 📚 Table of Contents
+<p align="center">
+  <a href="https://github.com/Nikpesu/WeatherStation">github.com/Nikpesu/WeatherStation</a> ·
+  <a href="https://github.com/Nikpesu/WeatherStation/releases">Releases</a> ·
+  <a href="https://github.com/Nikpesu/WeatherStation/actions">CI</a>
+</p>
 
-- [Overview](#esp32esp8266-mqtt-weatherstation-for-home-assistant)
-- [✅ Supported Boards](#-supported-boards)
-- [🚀 Setup Instructions](#-setup-instructions)
-  - [1. Install Required Tools](#1-install-required-tools)
-  - [2. Open the Project in PlatformIO](#2-open-the-project-in-platformio)
-  - [3. Select Your Board](#3-select-your-board)
-  - [4. Configure Settings (Optional)](#4-configure-settings-optional)
-  - [5. Upload the Firmware](#5-upload-the-firmware)
-  - [6. Upload Data Files](#6-upload-data-files)
-  - [7. Connect to Wi-Fi (If Not Preconfigured)](#7-connect-to-wi-fi-if-not-preconfigured)
-  - [8. Done! 🎉](#8-done-)
-- [📶 Mesh Wi-Fi roaming](#-mesh-wi-fi-roaming)
-- [🚦 Sensor status LEDs](#-sensor-status-leds)
-- [💾 Backup & Restore Configuration](#-backup--restore-configuration)
-  - [🔒 Encrypted sensitive fields](#-encrypted-sensitive-fields)
-  - [🔐 Web login & first-run setup](#-web-login--first-run-setup)
-- [📄 License](#-license)
+<p align="center">
+  <img alt="platform" src="https://img.shields.io/badge/platform-ESP32%20%7C%20ESP8266-blue">
+  <img alt="framework" src="https://img.shields.io/badge/framework-Arduino%20%2F%20PlatformIO-orange">
+  <img alt="home assistant" src="https://img.shields.io/badge/Home%20Assistant-MQTT%20discovery-41BDF5">
+  <img alt="license" src="https://img.shields.io/badge/license-GPL--3.0-green">
+</p>
 
 ---
+
+## 👋 About this project
+
+I built the **WeatherStation** myself back in **2022** — a hobby project I coded from scratch to
+read a few sensors on an ESP and push the values into Home Assistant. The original was a single
+`WeatherStation.ino` sketch.
+
+In **2026** I came back to it and rebuilt it into what it is now: a modular, multi-board firmware
+with a themed single-page web interface, a proper config/auth system, encrypted secrets, addressable
+status LEDs, per-sensor calibration, over-the-air updates straight from GitHub Releases, and CI that
+publishes a new build on every commit. Same idea, a lot more device.
+
+Everything here — firmware, web UI and tooling — is written and maintained by me,
+[**@Nikpesu**](https://github.com/Nikpesu). See the [changelog](#-changelog) for how it got here.
+
+---
+
+## ✨ Features
+
+- 🌡️ **Up to 10 air-quality / climate sensors** (I²C + UART) — temperature, humidity, pressure,
+  CO₂, VOC, and particulate matter — each independently toggled from the web UI.
+- 🏠 **Home Assistant MQTT auto-discovery** — sensors appear automatically, no YAML.
+- 🖥️ **Single-page web UI** served from the device (LittleFS) with **4 themes**
+  (dark / light / terminal / amber), a **live readings panel**, and live logs.
+- 🎚️ **Per-measurement calibration** — add a live offset to any sensor value; it flows through
+  both the UI and the MQTT payload.
+- 🚦 **WS2812 status LEDs** — one LED per sensor, coloured on a configurable value scale, with
+  optional **LDR auto-brightness**.
+- 🔐 **Web login + first-run setup + password change**, with **AES-256-CTR encrypted** secrets
+  and **encrypted config backup / restore**.
+- 📶 **Mesh Wi-Fi roaming** (jumps to the strongest AP on the same SSID) + **captive-portal**
+  hotspot setup mode.
+- ⬆️ **Firmware updates without a cable** — upload a `.bin` from the browser, or **OTA from
+  GitHub Releases** — and **your settings are preserved** across updates.
+- 🛠️ **Multi-board builds & CI** — one script builds every board; a GitHub Action publishes a
+  release on every push.
+- 🔋 **Low-power (deep-sleep) mode** and an optional **Bluetooth HCI-over-TCP bridge**.
+
+---
+
+## 🔩 Supported hardware
+
+### Boards (PlatformIO environments)
+
+| Board | Chip | Notes |
+|-------|------|-------|
+| Seeed XIAO ESP32-C3 | ESP32-C3 | ✅ recommended, lots of flash headroom |
+| Seeed XIAO ESP32-C6 | ESP32-C6 | ✅ works (flash is tight — see [notes](#-flash-usage)) |
+| Seeed XIAO ESP32-S3 | ESP32-S3 | ✅ 8 MB flash, huge headroom |
+| Lolin S2 Mini | ESP32-S2 | ✅ Wi-Fi only (no Bluetooth) |
+| Wemos D1 Mini | ESP8266 | ✅ lightest build |
+| ESP32 DOIT Devkit V1 | ESP32 | ⚠️ needs a pin-label tweak to compile |
+| AZ-Delivery Devkit V4 | ESP32 | ⚠️ needs a pin-label tweak to compile |
+
+> **Any** ESP32/ESP8266 board works — just add an environment in
+> [`platformio.ini`](platformio.ini). Each board has both a **USB** and an **OTA** (`espota`)
+> upload environment.
+
+### Sensors
+
+| Sensor | Bus | Measures |
+|--------|-----|----------|
+| SHT31 | I²C | temperature, humidity |
+| AHT2x | I²C | temperature, humidity |
+| BMP280 | I²C | temperature, pressure, altitude |
+| BMP580 (BMP581) | I²C | temperature, pressure, altitude |
+| SCD4x | I²C | CO₂, temperature, humidity |
+| SGP30 | I²C | TVOC, eCO₂, ethanol, H₂ |
+| ENS160 | I²C | eCO₂, TVOC, AQI |
+| SPS30 | I²C | PM1.0, PM2.5, PM10 |
+| PMSx003 | UART | PM1.0, PM2.5, PM10, temperature, humidity, HCHO |
+| PM1006K | UART | PM1.0, PM2.5, PM10 |
+
+Every pin is configurable from the web UI and accepts either a raw **GPIO number** (`19`) or the
+board's silkscreen **`Dx` label** (`D8`).
+
+---
+
+## 🚀 Quick start
 
 ### Requirements
 
-- An MQTT broker/server (e.g. Mosquitto)
-- A running Home Assistant instance with MQTT integration configured
-- Both your device and Home Assistant must connect to the **same MQTT server**
-- The MQTT discovery prefix in Home Assistant must be set to `homeassistant` (this is the default)
+- An **MQTT broker** (e.g. Mosquitto) and a **Home Assistant** instance with the MQTT integration
+  (discovery prefix `homeassistant`, the default). Both must reach the same broker.
+
+### Option A — flash a prebuilt image (no toolchain)
+
+1. Grab your board's `*-firmware.bin` and `*-littlefs.bin` from the
+   [**Releases**](https://github.com/Nikpesu/WeatherStation/releases) page (or build them with the
+   [`firmware maker`](firmware%20maker/) scripts).
+2. First-time flash over USB with `esptool`, or PlatformIO (`-t upload` then `-t uploadfs`).
+   See [`firmware maker/README.md`](firmware%20maker/README.md) for exact commands.
+3. After the first flash, **all future updates can be done over Wi-Fi** from the web UI — no cable.
+
+### Option B — build from source (PlatformIO)
+
+1. Install [VS Code](https://code.visualstudio.com/) + the
+   [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode).
+2. Open this folder. (Optional) copy `secrets.h.example` → `secrets.h` and preload your Wi-Fi/MQTT
+   defaults; otherwise configure everything later in the web UI.
+3. Pick your environment and upload firmware + filesystem:
+   ```bash
+   pio run -e seeed_xiao_esp32c3 -t upload      # program
+   pio run -e seeed_xiao_esp32c3 -t uploadfs    # web UI (data/)
+   ```
+   For OTA to a device already on the network, use the `_ota` environment
+   (e.g. `seeed_xiao_esp32c3_ota`), which uploads to `wsnikosoba.local` via `espota`.
+
+### First connection
+
+If no Wi-Fi is configured, the device boots into **Access Point** mode:
+
+- **SSID:** `ws1` · **Password:** `12345678`
+
+Connect and you'll be redirected to the setup page (or open `http://192.168.4.1`). Set Wi-Fi + MQTT,
+and the device appears in **Home Assistant** automatically. On your network it lives at
+`http://<hostname>.local` (default `ws1.local`).
 
 ---
 
-## ✅ Supported Boards
+## ⬆️ Firmware updates (OTA)
 
-This release is compatible with the following boards via **PlatformIO**:
+Open the device page → **⬆ Firmware Update**. Three ways to update, and **your settings are kept**
+every time:
 
-### **ESP32 Boards**
+1. **From GitHub** — *Check GitHub for updates* pulls the latest
+   [release](https://github.com/Nikpesu/WeatherStation/releases), compares it to the running version,
+   and installs the asset matching your board.
+2. **Manual upload** — drop a `firmware.bin` (program) and/or `littlefs.bin` (web UI) straight into
+   the browser.
+3. **`espota` / PlatformIO** — the classic `-t upload` / `-t uploadfs` over Wi-Fi via the `_ota`
+   environments.
 
-- AZ-Delivery Devkit V4
-- ESP32 DOIT Devkit V1
-- Lolin S2 Mini
-- Seeed XIAO ESP32-C3
-- Seeed XIAO ESP32-C6
-- Seeed XIAO ESP32-S3
+**How settings survive an update:** a firmware-only flash never touches the filesystem, so
+`/config.json` is untouched. A filesystem flash *would* wipe it, so the device first mirrors the
+config into NVS and restores it on the next boot (ESP32).
 
-### **ESP8266 Boards**
+> Bump `SWversion` in [`src/WS_config.h`](src/WS_config.h) before committing to make a release show
+> up as an **available update** on already-deployed devices. On every push to `main`, a
+> [GitHub Action](.github/workflows/build-release.yml) builds all boards and publishes the release
+> automatically.
 
-- Wemos D1 Mini
+### 🧮 Flash usage
 
-### **Any ESP8266/ESP32 board**
-
-- Just need to make custom board in `platformio.ini`
-
-Each board has both **USB upload** and **OTA update** environments available in the PlatformIO configuration.
-
----
-
-## 🚀 Setup Instructions
-
-### 1. Install Required Tools
-
-- Download and install [Visual Studio Code](https://code.visualstudio.com/)
-- Install the [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode) from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=platformio.platformio-ide)
-
-### 2. Open the Project in PlatformIO
-
-![Open Project](https://user-images.githubusercontent.com/92652074/227805914-9f61558e-7341-4283-bba1-01baa1d0d283.png)
-
-### 3. Select Your Board
-
-Choose the appropriate board for your microcontroller:
-
-![Select Board](https://user-images.githubusercontent.com/92652074/227806081-7891bc30-c31b-41e3-9e3c-0b7a8aa0ceae.png)
-
-### 4. Configure Settings (Optional)
-
-Customize parameters using either `secrets.h` or `config.h`.
-
-### 5. Upload the Firmware
-
-Click the upload button:
-
-![Upload Sketch](https://github.com/user-attachments/assets/c09eb2cc-f087-4720-b816-2e035ae29a85)
-
-### 6. Upload Data Files
-
-Upload the SPIFFS or LittleFS data:
-
-![Upload Data](https://github.com/user-attachments/assets/0d0c9a81-bb19-4a51-bebc-14dab6b0c8b8)
-
-### 7. Connect to Wi-Fi (If Not Preconfigured)
-
-If you haven't set the Wi-Fi credentials in advance, the device will start in Access Point (AP) mode. To configure it:
-
-1. Connect to the device's hotspot:
-   - **SSID:** `ws1`
-   - **Password:** `12345678`
-
-2. After connecting, you should be automatically redirected to the configuration homepage.
-   If not, open a browser and navigate to: `http://192.168.4.1`
-
-### 8. Done! 🎉
-
-Once connected and configured, your device should automatically appear in **Home Assistant** via MQTT Discovery.  
-You can find your instance on `MDNS_hostname.local` (default is `ws1.local`).
+The dual-OTA [partition table](my_partitions.csv) splits a 4 MB chip into two 1.73 MB program slots.
+The C6 is the tightest fit (~95%) because its newer SDK build is larger; the C3, S2, S3 and ESP8266
+all have comfortable headroom. The biggest single optional cost is the Bluetooth stack (~360 KB),
+which is only pulled in by the (default-off) HCI bridge.
 
 ---
 
-## 📶 Mesh Wi-Fi roaming
+## 🎚️ Sensor calibration & live readings
 
-If several access points broadcast the **same SSID** (a typical mesh / multi-AP
-setup), the device connects to the **strongest** one. Every 10 minutes it
-re-scans and, if another AP with the same SSID is **more than 10 dB stronger**
-than the current one, it hops to it. The 10 dB hysteresis prevents constant
-flapping between APs of similar strength. Thresholds are tunable in
-[`src/WS_config.h`](src/WS_config.h) (`ROAM_RSSI_THRESHOLD`, `ROAM_CHECK_INTERVAL`).
-
-> In hotspot/config mode the loop is paced (`HOTSPOT_LOOP_TIME`) so the board
-> idles instead of spinning, which keeps it from running hot.
+The main page shows a **live readings** panel (refreshed every few seconds) for every enabled sensor.
+Open **🎚 Sensor calibration** to add a **per-measurement offset** — watch the live value update as
+you tune. The offset is applied on the device, so it flows through **both** the UI and the value
+reported to Home Assistant. Set `0` for no correction.
 
 ---
 
 ## 🚦 Sensor status LEDs
 
-An optional **WS2812 / NeoPixel** strip can show, at a glance, the live state of
-the sensors. A single data wire drives the LEDs; each LED is assigned to a sensor
-and **coloured by that sensor's live reading** on a red → yellow → green scale you
-configure. An LED is **off** when it is unmapped, its sensor is disabled, or there
-is no data (NaN).
+An optional **WS2812 / NeoPixel** strip shows the live state of the sensors at a glance — each LED is
+assigned to a sensor and **coloured by that sensor's live reading** on a scale you configure.
 
-**All LED settings live in one popup** — open it with the **🚦 Sensor status
-LEDs** button on the config page. Inside the popup:
+**All LED settings live in one popup** — open it with **🚦 Sensor status LEDs**:
 
-- **Sensor status LEDs (WS2812 on LED pin)** — master on/off. It is **off by
-  default**; while off the data pin is left untouched so a sensor can use it.
-- **Auto LED brightness from LDR** — dim/brighten the strip with ambient light
-  (see below). When off, a fixed brightness is used.
-- **Number of LEDs** — configurable, **default 5** (up to `LED_MAX_COUNT`, 16).
-- **Per-LED sensor + part mapping** — two dropdowns on each LED row: first the
-  **sensor**, then the **part / measurement** of that sensor (e.g. SHT31 →
-  Temperature or Humidity; SCD4x → CO₂, Temperature or Humidity; PMSx003 → PM1.0,
-  PM2.5, PM10, Temperature, Humidity or HCHO). Only sensors currently **enabled**
-  under *Sensors* are listed; disabling a sensor drops its LED to *— none —* and
-  turns it off. Picking a part **auto-fills sensible default step values and
-  colours** for that measurement type (e.g. CO₂ 400/1000/1500, PM low=green,
-  temperature cold→warm→hot).
-- **Per-LED colours** — each LED has **3 steps**; for each step set a **value**
-  and a **colour** (colour picker, default red/yellow/green). The live reading is
-  interpolated between the step colours across the value points (values past
-  either end clamp), so the scale works ascending (e.g. temperature) or descending
-  (e.g. CO₂, where a high value is red). Each row also shows the LED's current
-  reading.
+- **Master on/off** (off by default; the data pin is left free while off).
+- **Auto brightness from LDR** (ambient-light dimming), or a fixed brightness.
+- **Number of LEDs** (default 5, up to 16).
+- **Per-LED sensor + measurement** mapping — pick the sensor, then which value of it (e.g. SCD4x →
+  CO₂/temp/humidity). Picking one fills in sensible default step values + colours.
+- **Per-LED 3-step colour scale** — a value **and** colour per step; the live reading is interpolated
+  between them (works ascending like temperature or descending like CO₂).
 
-Saving the popup applies everything **live** (no device restart). The data pin
-itself is the **Status LEDs (WS2812)** pin in the main *Pins* section (default
-**D8** on the XIAO boards).
+Saving applies everything **live**, no restart. The data pin is the **Status LEDs (WS2812)** pin in
+*Pins* (default **D8** on XIAO).
 
 ### Auto-brightness (LDR)
 
-The **Auto LED brightness from LDR** toggle (in the popup) dims/brightens the
-strip with ambient light, read from an **LDR** on the **LDR pin** (default
-**D0**). The LDR forms a divider with the on-board 10 kΩ pull-up to 3.3 V (LDR to
-GND): brighter surroundings → brighter LEDs, darkness → dim, so they don't glare
-at night.
+The LDR (default pin **D0**) forms a divider with the on-board 10 kΩ pull-up to 3.3 V: brighter
+surroundings → brighter LEDs, darkness → dim. The ambient/brightness ranges are calibratable in the
+popup.
 
-> ⚠️ **Pin conflicts:** the default LED pin `D8` is also the default **PM1006K /
-> PMSx003 RX** pin — a WS2812 (RMT output) and a particulate-sensor UART **cannot
-> share a GPIO**. The default LDR pin `D0` is also `RESET_CONFIG_PIN` on the XIAO
-> boards, where a dark LDR could read LOW at boot and trigger a config reset. Move
-> the conflicting pin in the pin settings if you use both.
-
-Defaults (`LED_PIN`, `LED_COUNT`, `LED_MAX_COUNT`, `LED_BRIGHTNESS`, `LDR_PIN`,
-`LED_BRIGHTNESS_MIN`/`MAX`) live in [`src/WS_config.h`](src/WS_config.h).
-
-> 💡 **Pin entry:** every pin field accepts either a raw **GPIO number** (e.g.
-> `19`) or the board's **`Dx` label** (e.g. `D8`); the device resolves `Dx` to the
-> right GPIO for the selected board.
+> ⚠️ **Pin conflicts:** default LED pin `D8` is also the default **PM1006K / PMSx003 RX** pin (a
+> WS2812 and a particulate-sensor UART can't share a GPIO). Default LDR pin `D0` is also
+> `RESET_CONFIG_PIN` on XIAO. Move the conflicting pin if you use both.
 
 ---
 
-## 💾 Backup & Restore Configuration
+## 📶 Mesh Wi-Fi roaming
 
-The whole device configuration (Wi-Fi, MQTT, sensor toggles, pins and other
-settings) is stored on the device as a single JSON file (`/config.json`) and is
-loaded into one in-memory `Config` structure. You can back it up and restore it
-straight from the web interface:
+If several access points broadcast the **same SSID**, the device connects to the **strongest** one,
+re-scans every 10 minutes, and hops to another AP only if it is **>10 dB stronger** (hysteresis
+prevents flapping). Tunable in [`src/WS_config.h`](src/WS_config.h) (`ROAM_RSSI_THRESHOLD`,
+`ROAM_CHECK_INTERVAL`).
 
-Both live in the **Current Config** window (opened from the main page):
+---
 
-- **⬇ Export Config** — downloads the current configuration as
-  `weatherstation_config.json`. Sensitive fields stay encrypted (see below), so
-  the file is safe to keep as a backup.
-- **⬆ Import Config** — upload a previously exported JSON file. You're asked for
-  the password the file was exported with (leave it blank if it had none); the
-  device decrypts, applies and saves it, then restarts.
+## 💾 Backup & restore + security
 
-This makes it easy to move a configuration between devices or restore it after a
-firmware flash that erased the filesystem.
+The whole configuration (Wi-Fi, MQTT, sensor toggles, pins, LEDs, calibration…) lives in a single
+`/config.json`. From the **Current Config** window:
 
-The same actions are also available over HTTP for automation:
+- **⬇ Export Config** — download `weatherstation_config.json` (sensitive fields stay encrypted, so
+  it's safe to keep).
+- **⬆ Import Config** — upload a backup; you're asked for the password it was exported with, then the
+  device applies and restarts. Wrong password is rejected **before** anything is changed.
 
-| Endpoint | Method | Description |
-| --- | --- | --- |
-| `/exportConfig` | `GET` | Returns the current config JSON as a download |
-| `/importConfig` | `POST` | Body `{ "config": "<json>", "password": "<may be blank>" }`; applies it, then restarts |
+### 🔒 Encrypted secrets
 
-### 🔒 Encrypted sensitive fields
+Wi-Fi password, MQTT username/password and the hotspot password are never stored in plain text —
+they're **AES-256-CTR** encrypted in `/config.json` and in backups.
 
-The sensitive fields — **WiFi password, MQTT username, MQTT password and hotspot
-password** — are never stored in plain text. They are encrypted with
-**AES‑256‑CTR** in `/config.json`, both on the device and inside exported
-backups. The rest of the config stays human‑readable.
+- Choose the encryption key via the **Config Password** (blank is allowed — still encrypted, just
+  with an empty-derived key).
+- The password itself is **never** in `/config.json`: it lives in **NVS (ESP32)** / a `/cfg.key` file
+  (ESP8266), so the device decrypts on its own at boot and (on ESP32) survives a filesystem-erasing
+  flash.
 
-- Set a **Config Password** in the configuration form to choose the encryption
-  key. Leaving it blank is allowed: the fields are still encrypted, just with an
-  empty‑password key (so they're never readable as plain text).
-- The password itself is **never written to `/config.json`**. It is kept in
-  **NVS on ESP32** and in a small key file (`/cfg.key`) on **ESP8266**, so the
-  device can decrypt and boot on its own.
-- On ESP32 the password survives a firmware flash that erases the filesystem, so
-  an encrypted backup made earlier can still be re‑imported afterwards. On
-  ESP8266 the key file lives on the filesystem, so note your password before
-  re‑flashing the data partition.
+> **Threat model:** this protects the config file from being read (web UI / a copy of the JSON).
+> Because the device must auto-decrypt at boot, the key is on-device — it does **not** protect
+> against an attacker who can dump the full flash.
 
-> **Threat model:** this protects the config file from being read directly
-> (e.g. via the web UI or a copy of `/config.json`). Because the device must
-> decrypt automatically at boot, the key is stored on the device, so it does
-> **not** protect against an attacker who can dump the full flash.
+### 🔐 Web login & setup
 
-### 🔐 Web login & first-run setup
+The same password gates the whole web interface: a one-time **first-run setup**, then a themed
+**login** (session cookie) on protected sites, plus a dedicated **change-password** page. Blank
+password = open site. **Forgot it?** Hold the **config-reset pin** during boot to wipe the password +
+setup flag and restore defaults, so you can never be locked out.
 
-The same password also gates the **whole web interface**:
+---
 
-- **First run:** the device shows a one-time setup screen where you either
-  **choose a password** (it can be left blank) or **upload a configuration** to
-  restore. Uploading asks for that file's password.
-- **After that:** if a password is set, the site shows a themed **login** screen
-  and every data endpoint requires a valid session (a cookie token issued on
-  login). If the password is blank, the site stays open.
-- Sessions live only in RAM, so a reboot logs everyone out. Use the **Log out**
-  button to end a session manually.
-- **Forgot the password?** Hold the **config-reset pin** (`RESET_CONFIG_PIN`)
-  during boot. This wipes the password and setup flag and restores the default
-  config, so you can never be permanently locked out.
+## 🗂️ Project structure
 
-Auth endpoints: `/status` (what screen to show), `/login`, `/logout`, `/setup`.
+```
+src/
+  main.cpp            entry point (setup/loop)
+  WS_config.h         config struct, board pin maps, globals, versions
+  WS_json.h           config load/save, encryption, auth, import/export
+  WS_network.h        web server + all HTTP endpoints, Wi-Fi/AP
+  WS_ota.h            firmware update: web upload + GitHub-release OTA
+  WS_mqtt.h           MQTT + Home Assistant discovery
+  WS_sensors.h        sensor read loop
+  WS_leds.h           WS2812 status LEDs + LDR brightness
+  WS_main.h           boot + main loop
+  SensorConfigs/      per-sensor config/read (conf_*.h)
+  bt_hci_bridge.*     optional Bluetooth HCI-over-TCP bridge
+data/index.html       the single-page web UI (LittleFS)
+firmware maker/       build scripts → per-board .bin images
+.github/workflows/    CI: build every board + publish a release
+```
+
+---
+
+## 📜 Changelog
+
+### 2026 — the rebuild (current)
+A ground-up modernisation of the whole project:
+- **New web UI** — single-page app served from LittleFS, 4 themes, live readings panel, live logs,
+  brick-style pin/sensor layout.
+- **Firmware update system** — browser `.bin` upload, **OTA from GitHub Releases**, settings
+  preserved across updates; `firmware maker` multi-board build scripts and a **GitHub Action** that
+  publishes a release on every commit.
+- **Per-sensor calibration** offsets with live preview.
+- **WS2812 status LEDs** with configurable colour scales + LDR auto-brightness.
+- **Security & accounts** — first-run setup, web login, password change, AES-256-CTR encrypted
+  secrets, encrypted config backup/restore with password verification.
+- **Mesh Wi-Fi roaming**, **Advanced Settings** popup, suggested-area picker, optional **Bluetooth
+  HCI bridge**, low-power mode.
+- **V3 → V4 refactor** (early–mid 2026): modular `WS_*.h` sources, configurable pins with a UI,
+  multi-board PlatformIO setup, SPS30 driver integration.
+
+### 2022 — the original
+The first version, written from scratch: a single-sketch ESP8266/ESP32 weather station reading a
+handful of sensors and publishing to Home Assistant over MQTT. This is where it all started.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0**.
+Licensed under the **GNU General Public License v3.0** — use, modify, distribute and share freely,
+with attribution and under the same license. Full text: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html).
 
-You are free to:
-
-- **Use** this software for any purpose
-- **Distribute** it freely
-- **Modify** the source code
-- **Share** your modified versions
-
-Under the following conditions:
-
-- **Attribution**: You must give appropriate credit to the original author.
-- **Share Alike**: Any modifications must also be released under the **same GPL v3 license**.
-- **License Notice**: You must include a copy of the license in any distribution.
-
-Read the full license text here: [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
-
-© Nikpesu, 2025
+© [Nikpesu](https://github.com/Nikpesu), 2022–2026
