@@ -6,6 +6,10 @@
 </p>
 
 <p align="center">
+  <b>🌐 <a href="https://nikpesu.github.io/WeatherStation/">Install it from your browser →</a></b>
+</p>
+
+<p align="center">
   <a href="https://github.com/Nikpesu/WeatherStation">github.com/Nikpesu/WeatherStation</a> ·
   <a href="https://github.com/Nikpesu/WeatherStation/releases">Releases</a> ·
   <a href="https://github.com/Nikpesu/WeatherStation/actions">CI</a>
@@ -104,7 +108,15 @@ board's silkscreen **`Dx` label** (`D8`).
 - An **MQTT broker** (e.g. Mosquitto) and a **Home Assistant** instance with the MQTT integration
   (discovery prefix `homeassistant`, the default). Both must reach the same broker.
 
-### Option A — flash a prebuilt image (no toolchain)
+### Option A — the web installer (easiest, no toolchain) 🌐
+
+Open **[nikpesu.github.io/WeatherStation](https://nikpesu.github.io/WeatherStation/)** in **Chrome or
+Edge on desktop**, plug the ESP into USB, and click **Install** — the right build for your chip is
+flashed automatically (firmware **and** web UI). The same page also has a **serial log/debug** console
+and a shortcut to open a device that's already on your network. Powered by
+[ESP Web Tools](https://esphome.github.io/esp-web-tools/) + Web Serial.
+
+### Option B — flash a prebuilt image manually
 
 1. Grab your board's `*-firmware.bin` and `*-littlefs.bin` from the
    [**Releases**](https://github.com/Nikpesu/WeatherStation/releases) page (or build them with the
@@ -113,7 +125,7 @@ board's silkscreen **`Dx` label** (`D8`).
    See [`firmware maker/README.md`](firmware%20maker/README.md) for exact commands.
 3. After the first flash, **all future updates can be done over Wi-Fi** from the web UI — no cable.
 
-### Option B — build from source (PlatformIO)
+### Option C — build from source (PlatformIO)
 
 1. Install [VS Code](https://code.visualstudio.com/) + the
    [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode).

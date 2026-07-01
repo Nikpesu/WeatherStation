@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeatherStation Web Installer</title>
+  <meta name="description" content="Install, update and debug the ESP32/ESP8266 WeatherStation firmware straight from your browser.">
+  <style>
+    :root{--bg:#0d1117;--bg2:#161b22;--bg3:#1c2330;--border:#30363d;--text:#e6edf3;--dim:#7d8590;--accent:#58a6ff;--accent2:#3fb950;--warn:#d29922;--err:#f85149;}
+    *{box-sizing:border-box;}
+    body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#182030,var(--bg));color:var(--text);
+      font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.6;}
+    a{color:var(--accent);}
+    .wrap{max-width:760px;margin:0 auto;padding:2rem 1.2rem 4rem;}
+    header{text-align:center;margin-bottom:2rem;}
+    h1{font-size:2.2rem;margin:.2rem 0;letter-spacing:.02em;}
+    h1 .g{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .sub{color:var(--dim);margin:0;}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.3rem 1.4rem;margin:1rem 0;}
+    .card h2{margin:.1rem 0 .3rem;font-size:1.15rem;}
+    .card p.hint{color:var(--dim);margin:.2rem 0 1rem;font-size:.92rem;}
+    .step{display:inline-block;background:var(--bg3);border:1px solid var(--border);border-radius:999px;
+      width:1.6rem;height:1.6rem;line-height:1.5rem;text-align:center;color:var(--accent);font-weight:700;margin-right:.4rem;}
+    button,.btn{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--border);
+      background:var(--bg3);color:var(--text);padding:.6rem 1rem;transition:.15s;}
+    button:hover,.btn:hover{border-color:var(--accent);}
+    .btn-primary{background:var(--accent);border-color:var(--accent);color:#04122b;font-weight:700;}
+    .row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;}
+    input[type=text]{flex:1;min-width:12rem;background:var(--bg);border:1px solid var(--border);border-radius:10px;
+      color:var(--text);padding:.55rem .7rem;font:inherit;}
+    esp-web-install-button{--esp-tools-button-color:#04122b;--esp-tools-button-background-color:var(--accent);}
+    .unsupported{color:var(--warn);}
+    pre#log{background:#05070c;border:1px solid var(--border);border-radius:10px;padding:.8rem;height:340px;
+      overflow:auto;margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;color:#c9d7e6;white-space:pre-wrap;}
+    .chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem;}
+    .chip{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:.15rem .7rem;font-size:.82rem;color:var(--dim);}
+    .note{font-size:.85rem;color:var(--dim);border-left:3px solid var(--border);padding:.2rem .8rem;margin-top:.8rem;}
+    footer{text-align:center;color:var(--dim);margin-top:2rem;font-size:.9rem;}
+    .ver{color:var(--accent2);}
+  </style>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🌦️ <span class="g">WeatherStation</span> Web Installer</h1>
+    <p class="sub">Flash, update and debug your device from the browser — no IDE, no drivers.</p>
+  </header>
+
+  <!-- 1. INSTALL -->
+  <div class="card">
+    <h2><span class="step">1</span>Install / update firmware</h2>
+    <p class="hint">Plug the ESP into a USB port, click Install, and pick the serial port. The right build is
+      chosen automatically for your chip. This writes the firmware <b>and</b> the web UI.</p>
+    <div class="row">
+      <esp-web-install-button manifest="./manifest.json">
+        <button slot="activate" class="btn-primary">⚡ Install WeatherStation</button>
+        <span slot="unsupported" class="unsupported">⚠ Your browser can't do serial installs — use desktop <b>Chrome</b> or <b>Edge</b>.</span>
+        <span slot="not-allowed" class="unsupported">⚠ Open this page over <b>https</b> (or localhost).</span>
+      </esp-web-install-button>
+      <span class="ver" id="verBadge"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="note">Installing does a full erase, so it also clears saved settings on the device.
+      To keep your settings, update from the device's own page (<b>⬆ Firmware Update</b>) or with the
+      per-file uploader instead.</div>
+  </div>
+
+  <!-- 2. SERIAL DEBUG / LOG -->
+  <div class="card">
+    <h2><span class="step">2</span>Debug over USB (serial log)</h2>
+    <p class="hint">Watch the live boot & runtime log from a plugged-in device (115200 baud). Great for
+      diagnosing Wi-Fi/MQTT issues.</p>
+    <div class="row" style="margin-bottom:.7rem">
+      <button id="connectBtn" class="btn-primary">🔌 Connect &amp; view log</button>
+      <button id="resetBtn" disabled>↻ Reset device</button>
+      <button id="clearBtn">🧹 Clear</button>
+      <button id="disconnectBtn" disabled>⏏ Disconnect</button>
+    </div>
+    <pre id="log">Serial output appears here…</pre>
+    <div class="note" id="serialNote"></div>
+  </div>
+
+  <!-- 3. NETWORK DEBUG -->
+  <div class="card">
+    <h2><span class="step">3</span>Open a device on the network</h2>
+    <p class="hint">Already flashed and on Wi-Fi? Enter its IP or <code>hostname.local</code> to open its
+      web page (which has a live log under <b>Current Config</b>).</p>
+    <div class="row">
+      <input type="text" id="host" placeholder="e.g. 192.168.1.50  or  wsnikosoba.local" value="ws1.local">
+      <button id="openUi" class="btn-primary">🌐 Open device</button>
+      <button id="openLog">📜 Live log</button>
+    </div>
+    <div class="note">Opened in a new tab. A browser can't stream the device's log <i>into</i> this page —
+      an <b>https</b> page isn't allowed to read an <b>http</b> device (mixed content) — so the device's
+      own page shows the log instead.</div>
+  </div>
+
+  <footer>
+    Open source · <a href="https://github.com/Nikpesu/WeatherStation" target="_blank">github.com/Nikpesu/WeatherStation</a>
+    · <a href="https://github.com/Nikpesu/WeatherStation/releases" target="_blank">Releases</a>
+  </footer>
+</div>
+
+<script>
+  // Show version + supported chips from the manifest.
+  fetch('./manifest.json').then(r=>r.json()).then(m=>{
+    document.getElementById('verBadge').textContent = m.version ? 'v'+m.version : '';
+    const chips=document.getElementById('chips');
+    (m.builds||[]).forEach(b=>{const s=document.createElement('span');s.className='chip';s.textContent=b.chipFamily;chips.appendChild(s);});
+  }).catch(()=>{});
+
+  /* ---- Web Serial console ---- */
+  const logEl=document.getElementById('log');
+  let port=null, reader=null, keepReading=false;
+  const supported = 'serial' in navigator;
+  const note=document.getElementById('serialNote');
+  if(!supported) note.innerHTML='⚠ Web Serial isn\'t available here — use desktop <b>Chrome</b> or <b>Edge</b> over https.';
+
+  function append(t){const at=logEl.scrollTop+logEl.clientHeight>=logEl.scrollHeight-4;logEl.textContent+=t;if(at)logEl.scrollTop=logEl.scrollHeight;}
+  const $=id=>document.getElementById(id);
+
+  async function connect(){
+    if(!supported){return;}
+    try{
+      port=await navigator.serial.requestPort();
+      await port.open({baudRate:115200});
+      logEl.textContent='';
+      $('connectBtn').disabled=true; $('disconnectBtn').disabled=false; $('resetBtn').disabled=false;
+      keepReading=true; readLoop();
+    }catch(e){ append('\n[connect failed: '+e.message+']\n'); }
+  }
+  async function readLoop(){
+    const dec=new TextDecoder();
+    while(port&&port.readable&&keepReading){
+      reader=port.readable.getReader();
+      try{ while(true){ const {value,done}=await reader.read(); if(done)break; if(value)append(dec.decode(value)); } }
+      catch(e){ append('\n[read error: '+e.message+']\n'); }
+      finally{ try{reader.releaseLock();}catch(e){} }
+    }
+  }
+  async function disconnect(){
+    keepReading=false;
+    try{ if(reader) await reader.cancel(); }catch(e){}
+    try{ if(port) await port.close(); }catch(e){}
+    port=null;
+    $('connectBtn').disabled=false; $('disconnectBtn').disabled=true; $('resetBtn').disabled=true;
+    append('\n[disconnected]\n');
+  }
+  async function resetDevice(){
+    if(!port) return;
+    try{ // pulse RTS (EN): assert then release to reboot the ESP
+      await port.setSignals({dataTerminalReady:false, requestToSend:true});
+      await new Promise(r=>setTimeout(r,120));
+      await port.setSignals({requestToSend:false});
+      append('\n[reset pulse sent]\n');
+    }catch(e){ append('\n[reset failed: '+e.message+']\n'); }
+  }
+  $('connectBtn').onclick=connect;
+  $('disconnectBtn').onclick=disconnect;
+  $('resetBtn').onclick=resetDevice;
+  $('clearBtn').onclick=()=>logEl.textContent='';
+
+  /* ---- Network deep-links ---- */
+  function normHost(){let h=$('host').value.trim();if(!h)return null;if(!/^https?:\/\//.test(h))h='http://'+h;return h.replace(/\/+$/,'');}
+  $('openUi').onclick=()=>{const h=normHost();if(h)window.open(h+'/homepage','_blank');};
+  $('openLog').onclick=()=>{const h=normHost();if(h)window.open(h+'/currentConfig','_blank');};
+</script>
+</body>
+</html>

@@ -113,3 +113,58 @@ jobs:
             Commit: ${{ github.sha }}
           files: release_assets/**/*.bin
           fail_on_unmatched_files: false
+
+  # Publish the browser installer (ESP Web Tools) to GitHub Pages, bundling the
+  # freshly-built bins + a generated manifest. Served at the repo's Pages URL.
+  installer:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Read firmware version
+        id: ver
+        run: echo "version=$(grep -oP 'SWversion\s*=\s*\"\K[^\"]+' src/WS_config.h)" >> "$GITHUB_OUTPUT"
+
+      - name: Download board artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bins
+          pattern: fw-*
+
+      - name: Assemble installer site
+        run: |
+          # download-artifact leaves each board in bins/fw-<board>/ — make_manifest handles that.
+          mkdir -p site
+          cp installer/index.html site/
+          touch site/.nojekyll
+          python installer/make_manifest.py \
+            --bins bins --out site \
+            --boot-app0 installer/assets/boot_app0.bin \
+            --version "${{ steps.ver.outputs.version }}"
+          echo "--- site contents ---"; ls -R site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
