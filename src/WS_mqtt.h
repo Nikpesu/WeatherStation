@@ -94,6 +94,7 @@ String makeMqttSensorTopic(int i, String sensor, String status_topic, String *de
           // HA turns object_id into the entity_id: sensor.<object_id> ->
           // e.g. sensor.sht31_temperature_wsnikosoba
           "\"object_id\": \""  + sensor + "_" + (String)*(SensorSuffix+i)+ "_" + mdns_hostname  + "\"," // sps30_pm1_0_wstestHostname
+          "\"object_name\": \""  + sensor + "_" + (String)*(SensorSuffix+i)+ "_" + mdns_hostname  + "\"," // sps30_pm1_0_wstestHostname
           "\"name\": \""  + sensor + " " + (String)*(SensorSuffix+i)+ "\"," // sps30_pm1_0_wstestHostname
           "\"origin\": {"
             "\"name\": \"Weatherstation\","
