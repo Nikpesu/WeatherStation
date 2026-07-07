@@ -370,6 +370,9 @@ void loadConfig()
       if (hwReset)
       {
         prefs.remove("cfgjson");        // a hardware reset must truly forget settings
+        prefs.remove("ssid");
+        prefs.remove("pass");
+        restored = true;                // skip the WiFi-credential fallback below
       }
       else
       {
@@ -414,13 +417,15 @@ void loadConfig()
       //Sensor toggles
       for(int i=0; i<SENSOR_COUNT; i++)
       {//toggleIDName: i0-Sensor_Toggle i1-SensorName
-        *toggles[i]=json[toggleIDName[i][0]];
+        if(!json[toggleIDName[i][0]].isNull())
+          *toggles[i]=json[toggleIDName[i][0]];
       }
 
       for(int i=0; i<FIELD_COUNT;i++)
       {
         String id = fieldsIDNameTypePlaceholder[i][0];
         if (id == "config_password") continue; // loaded from NVS, never in the file
+        if(json[id].isNull()) continue; // keep compile-time default for missing keys
 
         String value = readFieldValue(id, json[id].as<String>());
         String nochange = (String)NO_PASS_CHANGE;
@@ -428,7 +433,6 @@ void loadConfig()
         if (fieldsIDNameTypePlaceholder[i][2] == "password") {
             if (value != nochange) {
                 *(fields[i]) = value;
-            } else {
             }
         } else {
             *(fields[i]) = value;
@@ -442,7 +446,8 @@ void loadConfig()
         // file (e.g. LED_pin added after the file was first written).
         if(json[pinIDName[i][0]].isNull()) continue;
         // Accept either a GPIO number or a "Dx" board label.
-        *pins[i]=pinFromString(json[pinIDName[i][0]].as<String>());
+        int p = pinFromString(json[pinIDName[i][0]].as<String>());
+        if (p >= 0) *pins[i] = p;
       }
 
       // LED feature settings (managed by the LED popup, not part of fields[]).
@@ -450,6 +455,7 @@ void loadConfig()
       // bounded correctly. All are absent in older files -> struct defaults kept.
       if(!json["led_toggle"].isNull()) config.led_toggle = json["led_toggle"].as<bool>();
       if(!json["ldr_brightness_toggle"].isNull()) config.ldr_brightness_toggle = json["ldr_brightness_toggle"].as<bool>();
+      if(!json["led_reverse"].isNull()) config.led_reverse = json["led_reverse"].as<bool>();
       if(!json["led_count"].isNull())
       {
         int c = json["led_count"].as<int>();
@@ -529,6 +535,7 @@ void buildConfigJson(JsonDocument &json)
   // LED feature settings (managed entirely by the LED popup, not fields[]).
   json["led_toggle"] = config.led_toggle;
   json["ldr_brightness_toggle"] = config.ldr_brightness_toggle;
+  json["led_reverse"] = config.led_reverse;
   json["led_count"] = config.led_count;
   // Per-LED sensor mapping
   JsonArray ledMap = json["led_map"].to<JsonArray>();
@@ -612,7 +619,6 @@ void updateFieldsToString()
   mqtt_port_str = String(mqtt_port);
   lowPowerMode_toggle_str = String(lowPowerMode_toggle);
   refreshTime_str = String(refreshTime);
-  bt_bridge_toggle_str = String(bt_bridge_toggle);
   low_heat_toggle_str = String(low_heat_toggle);
 }
 
@@ -620,10 +626,11 @@ void updateFieldsToNative()
 {
   // Checkbox mirrors can arrive as "true"/"false" (POST) or "1"/"0" (String(bool)),
   // so accept both.
-  mqtt_port=mqtt_port_str.toInt();
+  mqtt_port = mqtt_port_str.toInt();
+  if (mqtt_port < 1 || mqtt_port > 65535) mqtt_port = MQTT_PORT;
   lowPowerMode_toggle=(lowPowerMode_toggle_str=="true" || lowPowerMode_toggle_str=="1");
   refreshTime = refreshTime_str.toInt();
-  bt_bridge_toggle=(bt_bridge_toggle_str=="true" || bt_bridge_toggle_str=="1");
+  if (refreshTime < 5) refreshTime = REFRESH_TIME;
   low_heat_toggle=(low_heat_toggle_str=="true" || low_heat_toggle_str=="1");
 }
 
@@ -668,7 +675,9 @@ int importConfig(String jsonStr, String password)
   if (!json["pw_check"].isNull())
   {
     // Exports made by this firmware carry a check token — a definitive test.
-    if (decryptString(json["pw_check"].as<String>(), password) != CONFIG_PW_CHECK)
+    // Reject plaintext forgeries: a genuine pw_check is always encrypted.
+    String raw = json["pw_check"].as<String>();
+    if (!raw.startsWith("enc:") || decryptString(raw, password) != CONFIG_PW_CHECK)
     {
       Serial.println("["+runningTime()+"] wrong import password; importConfig");
       return 2;
@@ -706,11 +715,15 @@ int importConfig(String jsonStr, String password)
   for(int i=0; i<PINS_COUNT; i++)
   {
     if(!json[pinIDName[i][0]].isNull())
-      *pins[i]=pinFromString(json[pinIDName[i][0]].as<String>());
+    {
+      int p = pinFromString(json[pinIDName[i][0]].as<String>());
+      if (p >= 0) *pins[i] = p;
+    }
   }
 
   if(!json["led_toggle"].isNull()) config.led_toggle = json["led_toggle"].as<bool>();
   if(!json["ldr_brightness_toggle"].isNull()) config.ldr_brightness_toggle = json["ldr_brightness_toggle"].as<bool>();
+  if(!json["led_reverse"].isNull()) config.led_reverse = json["led_reverse"].as<bool>();
   if(!json["led_count"].isNull())
   {
     int c = json["led_count"].as<int>();
@@ -742,6 +755,15 @@ int importConfig(String jsonStr, String password)
   if(json["led_col3"].is<JsonArray>())
     for(int i=0; i<LED_MAX_COUNT && i<(int)json["led_col3"].as<JsonArray>().size(); i++)
       config.led_col3[i]=json["led_col3"][i].as<uint32_t>();
+  // LDR auto-brightness calibration
+  if(!json["ldr_ambient_min"].isNull()) config.ldr_ambient_min = json["ldr_ambient_min"].as<int>();
+  if(!json["ldr_ambient_max"].isNull()) config.ldr_ambient_max = json["ldr_ambient_max"].as<int>();
+  if(!json["ldr_bright_min"].isNull())  config.ldr_bright_min  = json["ldr_bright_min"].as<int>();
+  if(!json["ldr_bright_max"].isNull())  config.ldr_bright_max  = json["ldr_bright_max"].as<int>();
+  // Per-measurement calibration offsets
+  if(json["sensor_offset"].is<JsonArray>())
+    for(int i=0; i<MEASURE_COUNT && i<(int)json["sensor_offset"].as<JsonArray>().size(); i++)
+      config.sensor_offset[i]=json["sensor_offset"][i].as<float>();
 
   for(int i=0; i<FIELD_COUNT; i++)
   {

@@ -80,8 +80,9 @@ void ledsBegin()
   {
     // Feature disabled: if the strip was previously running, blank it once;
     // if it was never initialised, leave the pin untouched so a sensor (e.g. a
-    // PM sensor sharing D8) can use it freely.
-    if (initedPin >= 0) { leds.clear(); leds.show(); }
+    // PM sensor sharing D8) can use it freely. Reset the pin cache so re-enabling
+    // does a full re-init (the RMT channel may have been detached meanwhile).
+    if (initedPin >= 0) { leds.clear(); leds.show(); initedPin = -2; }
     return;
   }
 
@@ -123,8 +124,12 @@ uint8_t ledBrightness()
   if (smoothed < 0) smoothed = raw;
   smoothed += (raw - smoothed) * 0.2f; // exponential moving average
 
-  long b = map((long)smoothed, config.ldr_ambient_min, config.ldr_ambient_max,
-               config.ldr_bright_max, config.ldr_bright_min);
+  long b;
+  if (config.ldr_ambient_max == config.ldr_ambient_min)
+    b = config.ldr_bright_min;  // avoid division by zero in map()
+  else
+    b = map((long)smoothed, config.ldr_ambient_min, config.ldr_ambient_max,
+            config.ldr_bright_max, config.ldr_bright_min);
   if (b < config.ldr_bright_min) b = config.ldr_bright_min;
   if (b > config.ldr_bright_max) b = config.ldr_bright_max;
   return (uint8_t)b;
@@ -190,7 +195,8 @@ void ledsUpdate()
     if (!*toggles[ledMeasures[m].sensor]) continue; // mapped sensor disabled -> off
     float v = *ledMeasures[m].value;
     if (isnan(v)) continue;                       // no data -> off
-    leds.setPixelColor(led, ledColorFromValue(v, config.led_red[led],    config.led_col1[led],
+    int pixel = config.led_reverse ? (config.led_count - 1 - led) : led;
+    leds.setPixelColor(pixel, ledColorFromValue(v, config.led_red[led],    config.led_col1[led],
                                                   config.led_yellow[led], config.led_col2[led],
                                                   config.led_green[led],  config.led_col3[led]));
     lit = true;

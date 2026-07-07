@@ -23,6 +23,10 @@ void bmp580Read()
     bmp580_press = data.pressure / 100.0f;                 // Pa -> hPa
     bmp580_alt   = 44330.0f * (1.0f - pow(bmp580_press / 1013.25f, 1.0f / 5.255f));
   }
+  else
+  {
+    bmp580_temp = bmp580_press = bmp580_alt = nan("");
+  }
 }
 
 void bmp580SetupSend()
@@ -57,7 +61,11 @@ void bmp580SetupSend()
         if(!lowPowerMode_toggle)
             runningTasks=1;
         else
+        {
+            sensorStart = 0;
             bmp580SetupSend();
+            sensorStart = 1;
+        }
     }
     else
     {
@@ -67,7 +75,7 @@ void bmp580SetupSend()
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
         {
-            msg+="\""+SensorSuffix[i]+"\":"+String((float)*(sensorVariables[i]))+",";
+            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
         }
         msg.remove(msg.length() - 1);
         msg+="}";

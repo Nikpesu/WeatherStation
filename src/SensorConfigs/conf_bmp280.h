@@ -67,7 +67,11 @@ void bmp280SetupSend()
             runningTasks=1;
         }
         else
+        {
+            sensorStart = 0;
             bmp280SetupSend();
+            sensorStart = 1;
+        }
     }
     else 
     {
@@ -77,7 +81,7 @@ void bmp280SetupSend()
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
         {
-            msg+="\""+SensorSuffix[i]+"\":"+String((float)*(sensorVariables[i]))+",";
+            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
         }
         msg.remove(msg.length() - 1);
         msg+="}";

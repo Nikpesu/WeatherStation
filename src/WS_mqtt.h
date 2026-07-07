@@ -1,3 +1,10 @@
+// JSON-safe float-to-string: NaN/Inf → "null", otherwise the number.
+inline String jsonFloat(float v)
+{
+  if (isnan(v) || isinf(v)) return "null";
+  return String(v);
+}
+
 void callback(char *topic, byte *payload, unsigned int length) {}
 
 void mqttSetup()
@@ -7,26 +14,76 @@ void mqttSetup()
   client.setBufferSize(1024);
 }
 
-void mqttConnect()
+bool mqttHasServerAndPort()
 {
+  return mqtt_server.length() > 0 && mqtt_port > 0;
+}
+
+bool mqttAttemptConnect(bool force)
+{
+  static unsigned long lastRetryAt = 0;
+  static bool missingConfigWarned = false;
+
   mqttSetup();
-  if(client.connected()) client.disconnect();
-  Serial.println("["+runningTime()+"] Attempting MQTT connection... WiFi: "+WiFi.status());
+
+  if (!mqttHasServerAndPort())
+  {
+    if (!missingConfigWarned)
+    {
+      Serial.println("[" + runningTime() + "] mqtt doest have ip/port");
+      missingConfigWarned = true;
+    }
+    return false;
+  }
+
+  missingConfigWarned = false;
+
+  if (client.connected())
+  {
+    if (!force)
+    {
+      return true;
+    }
+    client.disconnect();
+  }
+
+  if (!force)
+  {
+    unsigned long now = millis();
+    if (lastRetryAt != 0 && (now - lastRetryAt) < 15000)
+    {
+      return false;
+    }
+    lastRetryAt = now;
+  }
+  else
+  {
+    lastRetryAt = millis();
+  }
+
+  Serial.println("[" + runningTime() + "] Attempting MQTT connection... WiFi: " + WiFi.status());
   String clientId = mdns_hostname + UniqueDeviceID;
   if (client.connect(clientId.c_str(), mqtt_user.c_str(), mqtt_password.c_str(), mqtt_messageRoot.c_str(), 1, true, "{\"state\":\"offline\"}"))
   {
     client.publish(mqtt_messageRoot.c_str(), "{\"state\":\"online\"}", true);
-    Serial.println("["+runningTime()+"] MQTT connected!");
+    Serial.println("[" + runningTime() + "] MQTT connected!");
+    return true;
   }
   else
   {
-    Serial.println("["+runningTime()+"] MQTT failed, rc="+client.state());
+    Serial.println("[" + runningTime() + "] MQTT failed, rc=" + client.state());
+    return false;
   }
+}
+
+void mqttConnect()
+{
+  mqttAttemptConnect(true);
 }
 
 void sendMqtt(String topic, String msg, bool retain)
 { 
-  if (!client.connected()) mqttConnect();  // Only send if connected
+  if (!client.connected()) mqttAttemptConnect(false);  // Only send if connected
   if (!client.connected())
   {
 
@@ -39,7 +96,11 @@ void sendMqtt(String topic, String msg, bool retain)
   const char* topicChar = topic.c_str();
   const char* msgChar = msg.c_str();
 
-  client.publish(topicChar, msgChar, retain);
+  if (!client.publish(topicChar, msgChar, retain))
+  {
+    Serial.println("["+runningTime()+"] MQTT publish failed: \t"+topic);
+    return;
+  }
 
   char status_topic[mqtt_messageRoot.length() + 1];
   mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);

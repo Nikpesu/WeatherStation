@@ -8,6 +8,7 @@ void pm1006kReconfigure()
         reconfigure=0;
     }
 
+    delete pm1006k;
     #if defined(ESP8266)
         pm1006k = new PM1006K(&pm1006Serial);
     #elif defined(ESP32)
@@ -19,6 +20,7 @@ void pm1006kReconfigure()
 
 void pm1006kRead()
 {
+    if (!pm1006k) return;
     // Replace this with your actual PM1006K reading logic
     // These variables must be populated with sensor values
     if (pm1006k->takeMeasurement())
@@ -74,7 +76,11 @@ void pm1006kSetupSend()
             runningTasks=1;
         }
         else
+        {
+            sensorStart = 0;
             pm1006kSetupSend(); // read once if in low power
+            sensorStart = 1;
+        }
     }    
     else 
     {
@@ -84,7 +90,7 @@ void pm1006kSetupSend()
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
         {
-            msg+="\""+SensorSuffix[i]+"\":"+String((float)*(sensorVariables[i]))+",";
+            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
         }
         msg.remove(msg.length() - 1);
         msg+="}";

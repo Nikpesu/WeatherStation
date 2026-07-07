@@ -102,6 +102,8 @@ void httpWiFi()
 
   sendingValue+="]";
   
+  WiFi.scanDelete();  // free scan results
+
   server.send(200, "application/json",sendingValue);
 }
 void httpSensors()
@@ -147,6 +149,7 @@ void httpLedConfig()
   s = "{";
   s += "\"led_toggle\":" + String(led_toggle ? "true" : "false") + ",";
   s += "\"ldr_toggle\":" + String(ldr_brightness_toggle ? "true" : "false") + ",";
+  s += "\"led_reverse\":" + String(config.led_reverse ? "true" : "false") + ",";
   s += "\"count\":" + String(config.led_count) + ",";
   s += "\"maxCount\":" + String(LED_MAX_COUNT) + ",";
   s += "\"ldr_ambient_min\":" + String(config.ldr_ambient_min) + ",";
@@ -201,6 +204,7 @@ void httpLedConfigSet()
   }
   if(!d["led_toggle"].isNull()) led_toggle = d["led_toggle"].as<bool>();
   if(!d["ldr_toggle"].isNull()) ldr_brightness_toggle = d["ldr_toggle"].as<bool>();
+  if(!d["led_reverse"].isNull()) config.led_reverse = d["led_reverse"].as<bool>();
   if(!d["ldr_ambient_min"].isNull()) config.ldr_ambient_min = d["ldr_ambient_min"].as<int>();
   if(!d["ldr_ambient_max"].isNull()) config.ldr_ambient_max = d["ldr_ambient_max"].as<int>();
   if(!d["ldr_bright_min"].isNull())  config.ldr_bright_min  = constrain(d["ldr_bright_min"].as<int>(), 0, 255);
@@ -269,19 +273,6 @@ void httpLdr()
   int raw = analogRead(config.LDR_pin);
   server.send(200, "application/json",
     "{\"raw\":" + String(raw) + ",\"brightness\":" + String(ledBrightness()) + "}");
-}
-// Bluetooth HCI bridge status for the Advanced Settings popup.
-void httpBtStatus()
-{
-  REQUIRE_AUTH();
-  String s = "{";
-  s += "\"supported\":" + String(btHciBridgeSupported() ? "true" : "false") + ",";
-  s += "\"enabled\":"   + String(bt_bridge_toggle ? "true" : "false") + ",";   // saved config toggle
-  s += "\"running\":"   + String(btHciBridgeRunning() ? "true" : "false") + ","; // active this boot
-  s += "\"client\":"    + String(btHciBridgeClient() ? "true" : "false") + ",";
-  s += "\"port\":"      + String(btHciBridgePort());
-  s += "}";
-  server.send(200, "application/json", s);
 }
 // Static catalogue + current offsets for the sensor-calibration popup. One entry
 // per measurement: which sensor it belongs to, its label/key, whether that sensor
@@ -706,7 +697,8 @@ void httpData()
     for(int i=0; i<PINS_COUNT;i++)
     {
       // Accept either a GPIO number or a "Dx" board label.
-      *pins[i]=pinFromString(jsonDoc[pinIDName[i][0]].as<String>());
+      int p = pinFromString(jsonDoc[pinIDName[i][0]].as<String>());
+      if (p >= 0) *pins[i] = p;
     }
     // LED settings are handled entirely by the LED popup (/ledConfigSet), not here.
     for(int i=0; i<FIELD_COUNT;i++)
@@ -745,6 +737,7 @@ void httpData()
         server.send(200, "application/json", "{\"message\": \"restarting device and turning on hotspot\"}");
         Serial.println("["+runningTime()+"] restarting device and turning on hotspot");
         rst();
+        return;
       }
 
       if(oldWiFiSSID!=wifi_ssid || oldWiFiPass!=wifi_pass || (String)WiFi.getHostname()!=mdns_hostname)
@@ -794,7 +787,6 @@ void httpServicesStart()
   server.on("/ledConfigSet", httpLedConfigSet);
   server.on("/liveValues", httpLiveValues);
   server.on("/ldr", httpLdr);
-  server.on("/btStatus", httpBtStatus);
   server.on("/offsetConfig", httpOffsetConfig);
   server.on("/offsetConfigSet", httpOffsetConfigSet);
   server.on("/log", httpLog);
@@ -888,10 +880,6 @@ void wifiRoamCheck()
     {
       Serial.println("["+runningTime()+"] roaming to stronger AP: " + String(currentRssi) + " -> " + String(bestRssi) + " dBm");
       WiFi.begin(wifi_ssid.c_str(), wifi_pass.c_str(), ch, bestBssid, true);
-      unsigned long until = millis() + 8000;
-      while (!WiFi.isConnected() && millis() < until) delay(200);
-      if (WiFi.isConnected())
-        Serial.println("["+runningTime()+"] roamed, RSSI=" + String(WiFi.RSSI()) + " dBm");
     }
   }
   else
@@ -904,12 +892,14 @@ long  int timeout=0;
 void wifiStart()
 {
   //wifi start ...
+  int retries = 0;
   do{
     timeout=millis()+10000;
     WiFi.persistent(false);
     WiFi.disconnect(true);
     WiFi.mode(WIFI_STA);
-    if(!WiFi.status()==WL_CONNECTED) WiFi.disconnect();
+    WiFi.setHostname(mdns_hostname.c_str());  // must be before begin() so DHCP sends the custom name
+    if(WiFi.status() != WL_CONNECTED) WiFi.disconnect();
     connectToBestAP();
     Serial.print("["+runningTime()+"] ("+wifi_ssid+") WI-FI starting");
     while (!WiFi.isConnected() and millis()<=timeout)
@@ -919,6 +909,12 @@ void wifiStart()
       Serial.print(".");
     }
     Serial.println(".");
+    if (++retries >= 5)
+    {
+      Serial.println("["+runningTime()+"] WI-FI failed after 5 retries, falling back to hotspot");
+      apStart();
+      return;
+    }
   }while(WiFi.status() != WL_CONNECTED);
   Serial.println("\n["+runningTime()+"] WI-FI started!");
 
@@ -929,10 +925,11 @@ void wifiStart()
 
 
   //dns
-  if (!MDNS.begin(mdns_hostname.c_str()))
+  if (MDNS.begin(mdns_hostname.c_str()))
     Serial.println("["+runningTime()+"] MDNS started!");
+  else
+    Serial.println("["+runningTime()+"] MDNS failed to start!");
   ArduinoOTA.setHostname(mdns_hostname.c_str());
-  WiFi.setHostname(mdns_hostname.c_str());
   MDNS.addService("_http", "_tcp", 80);
 
   /*

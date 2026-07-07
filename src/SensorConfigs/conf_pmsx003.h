@@ -55,11 +55,15 @@ void pmsx003Read()
         if (pmsx003.has_formaldehyde())
             pmsx003_hcho=pmsx003.hcho;
     }
+    else
+    {
+        pmsx003_pm1_0 = pmsx003_pm2_5 = pmsx003_pm10_0 = nan("");
+        pmsx003_temp = pmsx003_hum = pmsx003_hcho = nan("");
+    }
 }
 
 String pmsx003TypeToString(PMS inSensor)
 {
-    if(inSensor==PLANTOWER_24B) return "PMS3003";
     if(inSensor==PLANTOWER_24B) return "PMS1003, PMS5003, PMS7003, PMSA003";
     if(inSensor==PLANTOWER_32B_S) return "PMS5003S";
     if(inSensor==PLANTOWER_32B_T) return "PMS5003T";
@@ -118,7 +122,11 @@ void pmsx003SetupSend()
             runningTasks=1;
         }
         else
+        {
+            sensorStart = 0;
             pmsx003SetupSend(); // read once if in low power
+            sensorStart = 1;
+        }
     }
     else 
     {
@@ -128,7 +136,7 @@ void pmsx003SetupSend()
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
         {
-            msg+="\""+SensorSuffix[i]+"\":"+String((float)*(sensorVariables[i]))+",";
+            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
         }
         msg.remove(msg.length() - 1);
         msg+="}";

@@ -531,6 +531,11 @@
     }
     .ledcolor-name { color: var(--accent); font-weight: bold; }
     .ledcolor-live { margin-left: auto; color: var(--text-dim); font-size: 0.8rem; }
+    .ledcolor-swatch {
+      display: inline-block; width: 1rem; height: 1rem; border-radius: 50%;
+      border: 1px solid var(--border); margin-left: 0.4rem; vertical-align: middle;
+      box-shadow: 0 0 6px currentColor; transition: background 0.3s;
+    }
     .ledcolor-bar {
       height: 14px; border-radius: 7px; border: 1px solid var(--border);
       background: linear-gradient(to right, #ff0000 0%, #ffff00 50%, #00ff00 100%);
@@ -990,10 +995,9 @@
       await makeSensors();
       try {
         const data = await fetchJSON('/fields');
-        let basic = '', adv = '', btChecked = false;
+        let basic = '', adv = '';
         for (const f of data) {
           if (f.fieldID === 'config_password') continue;                 // managed on /passChange
-          if (f.fieldID === 'bt_bridge_toggle') { btChecked = Boolean(Number(f.value)); continue; }
 
           const h = fieldHtml(f);
           if (ADVANCED_FIELDS.has(f.fieldID)) adv += h; else basic += h;
@@ -1005,12 +1009,8 @@
               `<button type="button" class="btn-config" style="margin-top:0.5rem" onclick="openOffsetModal()">🎚 Sensor calibration</button>` +
               `<button type="button" class="btn-config" style="margin-top:0.5rem" onclick="openAdvancedModal()">⚙ Advanced settings</button>`;
         }
-        // Pins + Bluetooth bridge live in the Advanced popup.
+        // Pins live in the Advanced popup.
         adv += (pinsHtml ? `<label for="pins">Pins</label><div id="pins" class="pinovi"></div>` : '');
-        adv += `<label>Bluetooth</label>` +
-               `<label class="field-check" for="bt_bridge_toggle"><span>BT HCI bridge (needs restart)</span>` +
-               `<input type="checkbox" id="bt_bridge_toggle" name="bt_bridge_toggle" ${btChecked ? 'checked' : ''}></label>` +
-               `<div class="ldr-live" id="btStatus">Bluetooth: …</div>`;
 
         document.getElementById('fields1').innerHTML = basic;
         document.getElementById('advFields').innerHTML = adv;
@@ -1028,28 +1028,12 @@
     }
 
     /* ── Advanced settings popup ── */
-    let advTimer = null;
-    async function refreshBtStatus() {
-      const el = document.getElementById('btStatus');
-      if (!el) return;
-      try {
-        const d = await fetchJSON('/btStatus');
-        if (!d.supported) { el.textContent = 'Bluetooth: not supported on this chip'; return; }
-        let s = d.running ? `running on TCP port ${d.port}` : (d.enabled ? 'enabled — restart to start' : 'disabled');
-        if (d.running && d.client) s += ' · host attached';
-        el.textContent = 'Bluetooth: ' + s;
-      } catch (e) { /* leave last value */ }
-    }
     function openAdvancedModal() {
       document.getElementById('advancedModal').hidden = false;
       const msg = document.getElementById('advMsg'); if (msg) { msg.className = 'auth-msg'; msg.textContent = ''; }
-      refreshBtStatus();
-      if (advTimer) clearInterval(advTimer);
-      advTimer = setInterval(refreshBtStatus, 2000);
     }
     function closeAdvancedModal() {
       document.getElementById('advancedModal').hidden = true;
-      if (advTimer) { clearInterval(advTimer); advTimer = null; }
     }
     async function saveAdvanced() {
       const msg = document.getElementById('advMsg');
@@ -1411,6 +1395,36 @@
         .join('');
     }
 
+    // Replicate the C++ ledColorFromValue + lerpColor to show the live colour swatch.
+    function hexFromU32(c) { return '#' + c.toString(16).padStart(6, '0'); }
+    function lerpColor(c1, c2, t) {
+      const r1 = (c1 >> 16) & 0xFF, g1 = (c1 >> 8) & 0xFF, b1 = c1 & 0xFF;
+      const r2 = (c2 >> 16) & 0xFF, g2 = (c2 >> 8) & 0xFF, b2 = c2 & 0xFF;
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const b = Math.round(b1 + (b2 - b1) * t);
+      return (r << 16) | (g << 8) | b;
+    }
+    function ledColor(v, red, yellow, green, col1, col2, col3) {
+      if (v === null || v === undefined) return null;
+      if (v <= red) return col1;
+      if (v >= green) return col3;
+      if (v <= yellow) return lerpColor(col1, col2, (v - red) / (yellow - red));
+      return lerpColor(col2, col3, (v - yellow) / (green - yellow));
+    }
+    function updateLedSwatches() {
+      for (let i = 0; i < ledState.count; i++) {
+        const el = document.getElementById('lc_swatch_' + i);
+        if (!el) continue;
+        const L = ledState.leds[i] || {};
+        const mp = L.map >= 0 ? L.map : -1;
+        const v = (mp >= 0 && mp in lastLive) ? lastLive[mp] : null;
+        const col = ledColor(v, L.red, L.yellow, L.green,
+          parseInt(L.col1, 16), parseInt(L.col2, 16), parseInt(L.col3, 16));
+        el.style.background = col ? hexFromU32(col) : 'transparent';
+      }
+    }
+
     function renderLedRows() {
       let html = '';
       for (let i = 0; i < ledState.count; i++) {
@@ -1423,7 +1437,8 @@
             `<div class="ledcolor-head">LED ${i + 1} · ` +
               `<select id="lc_sensor_${i}" class="led-sel" onchange="onLedSensorChange(${i})">${sensorOptionsHtml(sensorIdx)}</select>` +
               `<select id="lc_part_${i}" class="led-sel" onchange="onLedPartChange(${i})"${sensorIdx < 0 ? ' disabled' : ''}>${partOptionsHtml(sensorIdx, map)}</select>` +
-              `<span class="ledcolor-live" id="lc_live_${i}">live: ${live}</span></div>` +
+              `<span class="ledcolor-live" id="lc_live_${i}">live: ${live}</span>` +
+              `<span class="ledcolor-swatch" id="lc_swatch_${i}"></span></div>` +
             `<div class="ledcolor-inputs">` +
               `<input type="color" id="lc_col1_${i}" value="${L.col1}">` +
               `<input type="number" step="any" id="lc_red_${i}" value="${L.red}">` +
@@ -1513,6 +1528,7 @@
         ledState = { count: d.count, maxCount: d.maxCount || 16, sensors: d.sensors || [], measures: d.measures || [], leds: d.leds || [] };
         document.getElementById('led_toggle_cb').checked = !!d.led_toggle;
         document.getElementById('ldr_toggle_cb').checked = !!d.ldr_toggle;
+        document.getElementById('led_reverse_cb').checked = !!d.led_reverse;
         document.getElementById('ldr_amin_in').value = d.ldr_ambient_min;
         document.getElementById('ldr_amax_in').value = d.ldr_ambient_max;
         document.getElementById('ldr_bmin_in').value = d.ldr_bright_min;
@@ -1611,6 +1627,7 @@
           const mp = ledState.leds[i] ? ledState.leds[i].map : -1;
           el.textContent = 'live: ' + fmtLive((mp >= 0 && (mp in map)) ? map[mp] : null);
         }
+        updateLedSwatches();
       }
       // Calibration popup rows: show the raw reading and the calibrated value
       const offModal = document.getElementById('offsetModal');
@@ -1710,6 +1727,7 @@
       const payload = {
         led_toggle: document.getElementById('led_toggle_cb').checked,
         ldr_toggle: document.getElementById('ldr_toggle_cb').checked,
+        led_reverse: document.getElementById('led_reverse_cb').checked,
         ldr_ambient_min: parseInt(document.getElementById('ldr_amin_in').value, 10) || 0,
         ldr_ambient_max: parseInt(document.getElementById('ldr_amax_in').value, 10) || 0,
         ldr_bright_min: parseInt(document.getElementById('ldr_bmin_in').value, 10) || 0,
@@ -1859,6 +1877,7 @@
           <div class="led-top">
             <label class="led-check"><input type="checkbox" id="led_toggle_cb"> Sensor status LEDs (WS2812 on LED pin)</label>
             <label class="led-check"><input type="checkbox" id="ldr_toggle_cb"> Auto LED brightness from LDR (on LDR pin)</label>
+            <label class="led-check"><input type="checkbox" id="led_reverse_cb"> Reverse LED order (last LED ↔ first)</label>
             <label class="led-count">Number of LEDs
               <input type="number" id="led_count_in" min="1" value="5" onchange="onLedCountChange()">
             </label>

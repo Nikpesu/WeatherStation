@@ -16,7 +16,7 @@
 #include <PString.h> 
 #include <SoftwareSerial.h> 
 #endif
-#include "bt_hci_bridge.h"
+
 #include <LittleFS.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
@@ -59,9 +59,9 @@
   #define MQTT_USER ""
   #define MQTT_PASSWORD ""
 
-  #define MDNS_HOSTNAME "ws1"
+  #define MDNS_HOSTNAME ""       // first install: auto-generated at runtime
   #define WIFI_SSID ""
-  #define HOTSPOT_SSID "ws1"
+  #define HOTSPOT_SSID ""         // first install: auto-generated at runtime
   #define MQTT_SERVER ""
   #define MQTT_PORT 1883
   #define MQTT_MESSAGEROOT "WeatherStations/ws1"
@@ -288,7 +288,11 @@ inline int pinFromString(const String &s)
       if (n >= 0 && n < DPIN_COUNT) return kDPinMap[n];
 #endif
     }
+    return -1;  // D-prefixed but not a valid board pin number
   }
+  // Reject non-numeric garbage (toInt() would silently return 0)
+  for (unsigned int i = 0; i < t.length(); i++)
+    if (!isDigit(t[i])) return -1;
   return t.toInt();
 }
 
@@ -397,9 +401,6 @@ struct WSConfig {
   bool lowPowerMode_toggle = LOWPOWERMODE_TOGGLE;
   int refreshTime = REFRESH_TIME;
   String suggested_area = SUGGESTED_AREA;
-  // Bluetooth HCI-over-TCP bridge (esp_bt controller exposed on a TCP port).
-  // Off by default; uses significant RAM and needs a restart to (de)activate.
-  bool bt_bridge_toggle = false;
   // Low-heat mode: drop the CPU to 160 MHz + enable Wi-Fi modem sleep so the
   // board runs cooler (helps the tiny XIAO S3/C6). Off by default; needs a restart.
   bool low_heat_toggle = false;
@@ -408,6 +409,8 @@ struct WSConfig {
   bool led_toggle = LED_INDICATOR_TOGGLE;
   // ambient-light auto-brightness via LDR
   bool ldr_brightness_toggle = LDR_BRIGHTNESS_TOGGLE;
+  // reverse LED physical order (last LED becomes first in the strip)
+  bool led_reverse = false;
   // number of active LEDs (1..LED_MAX_COUNT), editable in the LED popup.
   int led_count = LED_COUNT;
   // which sensor each LED shows (value = sensor index 0..SENSOR_COUNT-1, -1 = off).
@@ -491,7 +494,6 @@ String &hotspot_pass = config.hotspot_pass;
 bool &lowPowerMode_toggle = config.lowPowerMode_toggle;
 int &refreshTime = config.refreshTime;
 String &suggested_area = config.suggested_area;
-bool &bt_bridge_toggle = config.bt_bridge_toggle;
 bool &low_heat_toggle = config.low_heat_toggle;
 bool &led_toggle = config.led_toggle;
 bool &ldr_brightness_toggle = config.ldr_brightness_toggle;
@@ -513,14 +515,13 @@ bool &SPS30_toggle = config.SPS30_toggle;
 String mqtt_port_str = String(mqtt_port);
 String lowPowerMode_toggle_str = String(lowPowerMode_toggle);
 String refreshTime_str = String(refreshTime);
-String bt_bridge_toggle_str = String(bt_bridge_toggle);
 String low_heat_toggle_str = String(low_heat_toggle);
 String test = "1";
 
 // NOTE: the LED toggles (led_toggle, ldr_brightness_toggle) and all other LED
 // settings are NOT in this list — they live entirely in the LED popup and are
 // persisted directly by buildConfigJson()/loadConfig().
-#define FIELD_COUNT 16
+#define FIELD_COUNT 15
 String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"wifi_ssid", "Wifi SSID:", "text", "SSID"},
     {"wifi_pass", "Wifi Password:", "password", "password"},
@@ -535,7 +536,6 @@ String fieldsIDNameTypePlaceholder[FIELD_COUNT][4] = {
     {"lowPowerMode_toggle", "Low Power Mode (can only be configured in hotspot mode!!)", "checkbox", ""},
     {"refreshTime", "Refresh Time:", "number", "default: 30"},
     {"suggested_area", "Suggested area:", "text", "for example: Outside, Inside, Bedroom..."},
-    {"bt_bridge_toggle", "Bluetooth HCI bridge (TCP, needs restart)", "checkbox", ""},
     {"low_heat_toggle", "Reduce heat (160 MHz CPU + Wi-Fi modem sleep, needs restart)", "checkbox", ""},
     {"config_password", "Config Password (encrypts stored secrets, leave blank for none):", "password", "password"}
 };
@@ -553,7 +553,6 @@ String* fields[FIELD_COUNT] = {
     &lowPowerMode_toggle_str,
     &refreshTime_str,
     &suggested_area,
-    &bt_bridge_toggle_str,
     &low_heat_toggle_str,
     &config_password
 };
@@ -672,24 +671,32 @@ float sps30_pm1_0 = nan(""), sps30_pm2_5 = nan(""), sps30_pm10_0 = nan("");
 // line up with the GitHub-release assets (see WS_ota.h and firmware maker/).
 #if defined(SEEED_XIAO_ESP32C3)
   #define FW_BOARD "seeed_xiao_esp32c3"
+  #define BOARD_SHORT_NAME "ESP32C3"
 #elif defined(SEEED_XIAO_ESP32C6)
   #define FW_BOARD "seeed_xiao_esp32c6"
+  #define BOARD_SHORT_NAME "ESP32C6"
 #elif defined(SEEED_XIAO_ESP32S3)
   #define FW_BOARD "seeed_xiao_esp32s3"
+  #define BOARD_SHORT_NAME "ESP32S3"
 #elif defined(LOLIN_S2_MINI)
   #define FW_BOARD "lolin_s2_mini"
+  #define BOARD_SHORT_NAME "S2Mini"
 #elif defined(ESP32DOIT_DEVKIT_V1)
   #define FW_BOARD "esp32doit_devkit_v1"
+  #define BOARD_SHORT_NAME "ESP32Dev"
 #elif defined(AZ_DELIVERY_DEVKIT_V4)
   #define FW_BOARD "az_delivery_devkit_v4"
+  #define BOARD_SHORT_NAME "ESP32Dev"
 #elif defined(D1_MINI)
   #define FW_BOARD "d1_mini"
+  #define BOARD_SHORT_NAME "D1Mini"
 #else
   #define FW_BOARD "unknown"
+  #define BOARD_SHORT_NAME "ESP"
 #endif
 
 //TODO update sw/hw version
-String SWversion="3.4.3"; //software version bump this when you change the firmware, so the user can see if they are up to date
+String SWversion="3.5.0"; //software version bump this when you change the firmware, so the user can see if they are up to date
 String HWversion="0.1"; //hardware version
 String Model="Weatherstation";
 String ModelID=device; //ESP32, SEEED_XIAO_ESP32C3... 

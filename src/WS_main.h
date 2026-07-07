@@ -21,6 +21,21 @@ void startProgram()
   }
   loadConfig();
 
+  // First install (no secrets.h → empty hostname): generate a unique name from
+  // the board type and the last 6 hex digits of the device MAC.
+  if (mdns_hostname.length() == 0)
+  {
+    String idSuffix = UniqueDeviceID.substring(max(0, (int)UniqueDeviceID.length() - 6));
+    mdns_hostname = "WS_" + String(BOARD_SHORT_NAME) + "_" + idSuffix;
+    hotspot_ssid = mdns_hostname;
+    saveConfig();  // persist so it sticks across reboots
+    Serial.println("[" + runningTime() + "] First install: generated hostname " + mdns_hostname);
+  }
+  else if (hotspot_ssid.length() == 0)
+  {
+    hotspot_ssid = mdns_hostname;
+  }
+
   // Low-heat mode: run the CPU at 160 MHz instead of 240 so the small XIAO
   // boards dissipate less heat (Wi-Fi modem sleep is enabled in wifiStart).
   #if defined(ESP32)
@@ -47,7 +62,6 @@ void startProgram()
     wifiConnectionType=true;
     wifiStart();
     mqttConnect();
-    if(bt_bridge_toggle) btHciBridgeBegin(6789);   // opt-in; uses lots of RAM
     sensorsBegin();
   }
 
@@ -127,9 +141,10 @@ void loopedProgram()
 
   //update counters
   loopCount++;
-  counter+=LOOP_TIME;
-  counter2+=LOOP_TIME;
-  avgTime+=(LOOP_TIME-timeStart);
+  unsigned int loopTime = wifiConnectionType ? LOOP_TIME : HOTSPOT_LOOP_TIME;
+  counter += loopTime;
+  counter2 += loopTime;
+  avgTime += loopTime - timeStart;
 
   //every 10s print out INFO and reset counters...
   if(counter2>=10000)

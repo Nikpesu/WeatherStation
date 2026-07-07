@@ -59,7 +59,7 @@ Everything here — firmware, web UI and tooling — is written and maintained b
   GitHub Releases** — and **your settings are preserved** across updates.
 - 🛠️ **Multi-board builds & CI** — one script builds every board; a GitHub Action publishes a
   release on every push.
-- 🔋 **Low-power (deep-sleep) mode** and an optional **Bluetooth HCI-over-TCP bridge**.
+- 🔋 **Low-power (deep-sleep) mode** for battery-friendly operation.
 
 ---
 
@@ -70,9 +70,9 @@ Everything here — firmware, web UI and tooling — is written and maintained b
 | Board | Chip | Notes |
 |-------|------|-------|
 | Seeed XIAO ESP32-C3 | ESP32-C3 | ✅ recommended, lots of flash headroom |
-| Seeed XIAO ESP32-C6 | ESP32-C6 | ✅ works (flash is tight — see [notes](#-flash-usage)) |
+| Seeed XIAO ESP32-C6 | ESP32-C6 | ✅ works |
 | Seeed XIAO ESP32-S3 | ESP32-S3 | ✅ 8 MB flash, huge headroom |
-| Lolin S2 Mini | ESP32-S2 | ✅ Wi-Fi only (no Bluetooth) |
+| Lolin S2 Mini | ESP32-S2 | ✅ Wi-Fi only |
 | Wemos D1 Mini | ESP8266 | ✅ lightest build |
 | ESP32 DOIT Devkit V1 | ESP32 | ⚠️ needs a pin-label tweak to compile |
 | AZ-Delivery Devkit V4 | ESP32 | ⚠️ needs a pin-label tweak to compile |
@@ -137,17 +137,23 @@ and a shortcut to open a device that's already on your network. Powered by
    pio run -e seeed_xiao_esp32c3 -t uploadfs    # web UI (data/)
    ```
    For OTA to a device already on the network, use the `_ota` environment
-   (e.g. `seeed_xiao_esp32c3_ota`), which uploads to `wsnikosoba.local` via `espota`.
+   (e.g. `seeed_xiao_esp32c3_ota`), which uploads to `<hostname>.local` via `espota`.
 
 ### First connection
 
-If no Wi-Fi is configured, the device boots into **Access Point** mode:
+If no Wi-Fi is configured (or no `secrets.h` was provided at build time), the device boots into
+**Access Point** mode with a **unique auto-generated name**:
 
-- **SSID:** `ws1` · **Password:** `12345678`
+- **SSID / mDNS hostname:** `WS_<Board>_<ID>` (e.g. `WS_ESP32C6_D4E5F6`)
+- **Password:** `12345678`
 
-Connect and you'll be redirected to the setup page (or open `http://192.168.4.1`). Set Wi-Fi + MQTT,
-and the device appears in **Home Assistant** automatically. On your network it lives at
-`http://<hostname>.local` (default `ws1.local`).
+The ID is the last 6 hex digits of the device's MAC address, so every device gets a distinct name
+out of the box.
+
+Connect to the hotspot and you'll be redirected to the setup page (or open `http://192.168.4.1`).
+Set Wi-Fi + MQTT, and the device appears in **Home Assistant** automatically. On your network it
+lives at `http://<hostname>.local`. Configure a custom hostname later in the web UI — it persists
+across restarts.
 
 ---
 
@@ -176,9 +182,17 @@ config into NVS and restores it on the next boot (ESP32).
 ### 🧮 Flash usage
 
 The dual-OTA [partition table](my_partitions.csv) splits a 4 MB chip into two 1.73 MB program slots.
-The C6 is the tightest fit (~95%) because its newer SDK build is larger; the C3, S2, S3 and ESP8266
-all have comfortable headroom. The biggest single optional cost is the Bluetooth stack (~360 KB),
-which is only pulled in by the (default-off) HCI bridge.
+Current build sizes (v3.5.0, release mode):
+
+| Board | Flash | RAM |
+|-------|-------|-----|
+| Seeed XIAO ESP32-C6 | ~82% | ~17% |
+| Seeed XIAO ESP32-C3 | ~75% | ~15% |
+| Other ESP32 boards | ~60–70% | ~12–15% |
+| ESP8266 (D1 Mini) | ~70% | ~50% |
+
+All boards have comfortable headroom in release builds. The C6 is the largest binary
+because its RISC-V SDK produces more code than the Xtensa targets.
 
 ---
 
@@ -205,6 +219,9 @@ assigned to a sensor and **coloured by that sensor's live reading** on a scale y
   CO₂/temp/humidity). Picking one fills in sensible default step values + colours.
 - **Per-LED 3-step colour scale** — a value **and** colour per step; the live reading is interpolated
   between them (works ascending like temperature or descending like CO₂).
+- **Reverse LED order** — flip the strip direction from the UI without rewiring.
+- **Live colour swatch** — each LED row shows a glowing circle of the colour it would display
+  right now, updated live.
 
 Saving applies everything **live**, no restart. The data pin is the **Status LEDs (WS2812)** pin in
 *Pins* (default **D8** on XIAO).
@@ -278,7 +295,6 @@ src/
   WS_leds.h           WS2812 status LEDs + LDR brightness
   WS_main.h           boot + main loop
   SensorConfigs/      per-sensor config/read (conf_*.h)
-  bt_hci_bridge.*     optional Bluetooth HCI-over-TCP bridge
 data/index.html       the single-page web UI (LittleFS)
 firmware maker/       build scripts → per-board .bin images
 .github/workflows/    CI: build every board + publish a release
@@ -299,8 +315,13 @@ A ground-up modernisation of the whole project:
 - **WS2812 status LEDs** with configurable colour scales + LDR auto-brightness.
 - **Security & accounts** — first-run setup, web login, password change, AES-256-CTR encrypted
   secrets, encrypted config backup/restore with password verification.
-- **Mesh Wi-Fi roaming**, **Advanced Settings** popup, suggested-area picker, optional **Bluetooth
-  HCI bridge**, low-power mode.
+- **Mesh Wi-Fi roaming**, **Advanced Settings** popup, suggested-area picker,
+  low-power mode.
+- **First-install auto-naming** — devices without a `secrets.h` get a unique hostname
+  (`WS_ESP32C6_D4E5F6`) from the board type + MAC suffix.
+- **MQTT reconnect throttling** — retries every 15 s instead of hammering the broker.
+- **Bug-fix pass** — ~20 fixes across WiFi reconnect, config persistence, sensor NaN handling,
+  pin validation, and more.
 - **V3 → V4 refactor** (early–mid 2026): modular `WS_*.h` sources, configurable pins with a UI,
   multi-board PlatformIO setup, SPS30 driver integration.
 

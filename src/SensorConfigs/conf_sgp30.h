@@ -15,7 +15,7 @@ void sgp30Reconfigure()
 
 void sgp30Read()
 {
-    if(!(sht31_temp==nan("") or sht31_hum==nan("")))
+    if(!isnan(sht31_temp) && !isnan(sht31_hum))
         sgp30.setHumidity(getAbsoluteHumidity(sht31_temp, sht31_hum));
     else 
         sgp30.setHumidity(0);
@@ -67,7 +67,11 @@ void sgp30SetupSend()
             runningTasks=1;
         }
         else
+        {
+            sensorStart = 0;
             sgp30SetupSend();
+            sensorStart = 1;
+        }
     }
     else 
     {
@@ -77,7 +81,7 @@ void sgp30SetupSend()
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
         {
-            msg+="\""+SensorSuffix[i]+"\":"+String((float)*(sensorVariables[i]))+",";
+            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
         }
         msg.remove(msg.length() - 1);
         msg+="}";

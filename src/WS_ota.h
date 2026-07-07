@@ -175,7 +175,12 @@ void httpOtaUpdate()
   if (!isAuthed()) { server.send(401, "application/json", "{\"message\":\"unauthorized\"}"); return; }
   String body = server.hasArg("plain") ? server.arg("plain") : (server.args() ? server.arg(0) : String("{}"));
   JsonDocument d;
-  deserializeJson(d, body);
+  DeserializationError de = deserializeJson(d, body);
+  if (de)
+  {
+    server.send(400, "application/json", "{\"error\":\"bad request: " + String(de.c_str()) + "\"}");
+    return;
+  }
   bool doFs = d["filesystem"].as<bool>();
 
   String tag, fwUrl, fsUrl, err;

@@ -95,14 +95,16 @@ void sps30SetupSend() {
         if (!lowPowerMode_toggle) {
             runningTasks = 1;
         } else {
+            sensorStart = 0;
             if (SPS30_toggle) sps30SetupSend();
+            sensorStart = 1;
         }
     } else {
         sps30Read();
         applySensorOffset(8);
         String msg = "{";
         for (int i = 0; i < 3; i++) {
-            msg += "\"" + SensorSuffix[i] + "\":" + String(*sensorVariables[i]) + ",";
+            msg += "\"" + SensorSuffix[i] + "\":" + jsonFloat(*sensorVariables[i]) + ",";
         }
         msg.remove(msg.length() - 1);
         msg += "}";

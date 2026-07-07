@@ -64,7 +64,11 @@ void aht2xSetupSend()
             runningTasks=1;
         }
         else
+        {
+            sensorStart = 0;
             aht2xSetupSend();
+            sensorStart = 1;
+        }
     }
     else 
     {
@@ -74,7 +78,7 @@ void aht2xSetupSend()
         String msg="{";
         for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
         {
-            msg+="\""+SensorSuffix[i]+"\":"+String((float)*(sensorVariables[i]))+",";
+            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
         }
         msg.remove(msg.length() - 1);
         msg+="}";
