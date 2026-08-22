@@ -1039,7 +1039,7 @@
       const msg = document.getElementById('advMsg');
       msg.className = 'auth-msg'; msg.textContent = 'Saving…';
       await sendData();   // saves ALL fields (basic + advanced live in the same DOM)
-      msg.className = 'auth-msg ok'; msg.textContent = 'Saved (Bluetooth changes need a restart)';
+      msg.className = 'auth-msg ok'; msg.textContent = 'Saved';
     }
 
     const delay = ms => new Promise(r => setTimeout(r, ms));

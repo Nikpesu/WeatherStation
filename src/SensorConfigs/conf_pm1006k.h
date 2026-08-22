@@ -38,10 +38,10 @@ void pm1006kSetupSend()
     String deviceClass[] = {"pm1", "pm25", "pm10"};  // temperature, pressure, humidity, pm1, pm25...   https://www.home-assistant.io/integrations/homeassistant/#device-class
     String unitOfMeasurement[] = {"µg/m³","µg/m³","µg/m³"};
     float *sensorVariables[] ={&pm1006k_pm1_0, &pm1006k_pm2_5, &pm1006k_pm10_0};
-    if(reconfigure){
-        for (int i = 0; i < sizeof(SensorSuffix)/sizeof(SensorSuffix[0]); i++)
-            sendMqtt("homeassistant/sensor/" + mdns_hostname+"_"+UniqueDeviceID + "/" + sensor + "_" + SensorSuffix[i] + "/config","",true);
-            return;
+        if(reconfigure){
+        sendMqttSensorDiscoveryClear(sensor, SensorSuffix, sizeof(SensorSuffix)/sizeof(SensorSuffix[0]));
+        sendMqttSensorValuesClear(sensor, SensorSuffix, sizeof(SensorSuffix)/sizeof(SensorSuffix[0]));
+        return;
     }
 
     if(sensorStart==1)
@@ -58,16 +58,10 @@ void pm1006kSetupSend()
 
 
 
-        char status_topic[mqtt_messageRoot.length() + 1];
-        mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
+        String status_topic = mqttStatusTopic();
         // Sending MQTT Discovery messages for each PM sensor (pm1_0, pm2_5, pm10_0)
         
-        for (int i = 0; i < sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]); i++)
-            sendMqtt(
-                "homeassistant/sensor/" + mdns_hostname+"_"+UniqueDeviceID + "/" + sensor + "_" + SensorSuffix[i] + "/config", 
-                makeMqttSensorTopic(i, sensor, status_topic, &deviceClass[0], &SensorSuffix[0],  &unitOfMeasurement[0]), 
-                true
-            );
+        sendMqttSensorDiscovery(sensor, status_topic, deviceClass, SensorSuffix, unitOfMeasurement, sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]));
 
         // Handle sensor readings and refresh if not in low power mode
         if (!lowPowerMode_toggle)
@@ -87,15 +81,7 @@ void pm1006kSetupSend()
         pm1006kRead();
         applySensorOffset(3);
 
-        String msg="{";
-        for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
-        {
-            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
-        }
-        msg.remove(msg.length() - 1);
-        msg+="}";
-
-        sendMqtt(mqtt_messageRoot+"/"+sensor, msg,true);
+        sendMqttSensorValues(sensor, SensorSuffix, sensorVariables, sizeof(sensorVariables)/sizeof(sensorVariables[0]));
 
     }
 }

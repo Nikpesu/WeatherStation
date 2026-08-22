@@ -816,6 +816,7 @@ void httpServicesStart()
 void connectToBestAP()
 {
   WiFi.persistent(false);
+  WiFi.setHostname(mdns_hostname.c_str());
   WiFi.mode(WIFI_STA);
 
   int n = WiFi.scanNetworks();
@@ -897,8 +898,8 @@ void wifiStart()
     timeout=millis()+10000;
     WiFi.persistent(false);
     WiFi.disconnect(true);
+    WiFi.setHostname(mdns_hostname.c_str());  // must be before mode() so DHCP sends the custom name
     WiFi.mode(WIFI_STA);
-    WiFi.setHostname(mdns_hostname.c_str());  // must be before begin() so DHCP sends the custom name
     if(WiFi.status() != WL_CONNECTED) WiFi.disconnect();
     connectToBestAP();
     Serial.print("["+runningTime()+"] ("+wifi_ssid+") WI-FI starting");

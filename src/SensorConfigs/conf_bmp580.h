@@ -36,10 +36,10 @@ void bmp580SetupSend()
     String deviceClass[] = {"temperature","pressure","distance"};  // https://www.home-assistant.io/integrations/homeassistant/#device-class
     String unitOfMeasurement[] = {"°C","hPa","m"};
     float *sensorVariables[] ={&bmp580_temp, &bmp580_press, &bmp580_alt};
-    if(reconfigure){
-        for (int i = 0; i < sizeof(SensorSuffix)/sizeof(SensorSuffix[0]); i++)
-            sendMqtt("homeassistant/sensor/" + mdns_hostname+"_"+UniqueDeviceID + "/" + sensor + "_" + SensorSuffix[i] + "/config","",true);
-            return;
+        if(reconfigure){
+        sendMqttSensorDiscoveryClear(sensor, SensorSuffix, sizeof(SensorSuffix)/sizeof(SensorSuffix[0]));
+        sendMqttSensorValuesClear(sensor, SensorSuffix, sizeof(SensorSuffix)/sizeof(SensorSuffix[0]));
+        return;
     }
 
 
@@ -50,12 +50,7 @@ void bmp580SetupSend()
         char status_topic[mqtt_messageRoot.length() + 1];
         mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
 
-        for (int i = 0; i < sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]); i++)
-            sendMqtt(
-                "homeassistant/sensor/" + mdns_hostname+"_"+UniqueDeviceID + "/" + sensor + "_" + SensorSuffix[i] + "/config",
-                makeMqttSensorTopic(i, sensor, status_topic, &deviceClass[0], &SensorSuffix[0],  &unitOfMeasurement[0]),
-                true
-            );
+        sendMqttSensorDiscovery(sensor, status_topic, deviceClass, SensorSuffix, unitOfMeasurement, sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]));
 
 
         if(!lowPowerMode_toggle)
@@ -72,15 +67,7 @@ void bmp580SetupSend()
         bmp580Read();
         applySensorOffset(9);
 
-        String msg="{";
-        for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
-        {
-            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
-        }
-        msg.remove(msg.length() - 1);
-        msg+="}";
-
-        sendMqtt(mqtt_messageRoot+"/"+sensor, msg,true);
+        sendMqttSensorValues(sensor, SensorSuffix, sensorVariables, sizeof(sensorVariables)/sizeof(sensorVariables[0]));
 
     }
 }

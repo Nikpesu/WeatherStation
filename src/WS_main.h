@@ -88,7 +88,7 @@ void loopedProgram()
 {
   int timeStart;
   int timeTook;
-  espBootBlinkTick();   // drive the onboard-LED boot blink until it completes
+  //espBootBlinkTick();   // drive the onboard-LED boot blink until it completes
   if(wifiConnectionType)
   {
     timeStart=millis();

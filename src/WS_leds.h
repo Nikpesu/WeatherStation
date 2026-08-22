@@ -8,6 +8,8 @@
 // The whole feature is gated by config.led_toggle and uses the user-configurable
 // config.LED_pin (see WS_config.h).
 
+#pragma once
+
 // Catalogue of every measurement an LED can show. Each entry knows which sensor
 // it belongs to (index into toggles[]/toggleIDName, for enable-gating + name), a
 // human label for the "part" dropdown, the live value, and a `key` that selects
@@ -82,7 +84,13 @@ void ledsBegin()
     // if it was never initialised, leave the pin untouched so a sensor (e.g. a
     // PM sensor sharing D8) can use it freely. Reset the pin cache so re-enabling
     // does a full re-init (the RMT channel may have been detached meanwhile).
-    if (initedPin >= 0) { leds.clear(); leds.show(); initedPin = -2; }
+    if (initedPin >= 0)
+    {
+      leds.clear();
+      leds.show();
+      initedPin = -2;
+      initedCount = -1;
+    }
     return;
   }
 
@@ -94,8 +102,6 @@ void ledsBegin()
     if (initedCount != config.led_count)
     {
       leds.updateLength(config.led_count);
-      leds.clear();
-      leds.show();
       initedCount = config.led_count;
     }
     return;
@@ -114,25 +120,30 @@ void ledsBegin()
 
 // Strip brightness (0-255). With auto-brightness off it's a fixed value; with the
 // LDR enabled it's mapped from ambient light (bright -> brighter so LEDs stay
-// visible by day and dim at night), lightly smoothed to avoid flicker.
+// visible by day and dim at night). A deadband of 10 prevents tiny fluctuations
+// from constantly retriggering a strip refresh.
 uint8_t ledBrightness()
 {
   if (!ldr_brightness_toggle) return LED_BRIGHTNESS;
 
-  static float smoothed = -1.0f;
+  static uint8_t lastB = LED_BRIGHTNESS;
+
   int raw = analogRead(config.LDR_pin); // 0 = bright .. LDR_ADC_MAX = dark
-  if (smoothed < 0) smoothed = raw;
-  smoothed += (raw - smoothed) * 0.2f; // exponential moving average
 
   long b;
   if (config.ldr_ambient_max == config.ldr_ambient_min)
     b = config.ldr_bright_min;  // avoid division by zero in map()
   else
-    b = map((long)smoothed, config.ldr_ambient_min, config.ldr_ambient_max,
+    b = map((long)raw, config.ldr_ambient_min, config.ldr_ambient_max,
             config.ldr_bright_max, config.ldr_bright_min);
   if (b < config.ldr_bright_min) b = config.ldr_bright_min;
   if (b > config.ldr_bright_max) b = config.ldr_bright_max;
-  return (uint8_t)b;
+
+  // Deadband: only change output if the difference exceeds 10 (out of 255).
+  if (abs((int)b - (int)lastB) > 10)
+    lastB = (uint8_t)b;
+
+  return lastB;
 }
 
 // Blend two packed 0xRRGGBB colours by fraction t (0..1).
@@ -164,45 +175,43 @@ uint32_t ledColorFromValue(float v, float v1, uint32_t c1, float v2, uint32_t c2
   return lerpColor(c2, c3, f2);
 }
 
-// Refresh the LED colours from the live sensor state. Cheap, but self-throttled so
-// it can be called every loop iteration without flooding the strip. Each LED shows
-// the sensor it is mapped to (config.led_map), coloured by where its live reading
-// falls on that LED's red/yellow/green value scale. Off = unmapped slot, disabled
-// sensor, or no data (NaN).
-// Set true the first time the WS2812 strip actually lights a pixel (i.e. the status
-// LEDs "turn on"). The boot-blink watches this to know when to stop blinking.
+// Refresh the LED colours from the live sensor state. Self-throttled to avoid
+// flooding the strip. Each LED shows the sensor it is mapped to (config.led_map),
+// coloured by where its live reading falls on that LED's red/yellow/green value
+// scale. Off = unmapped slot, disabled sensor, or no data (NaN).
 bool ledsHaveLit = false;
 
 void ledsUpdate()
 {
   if (!led_toggle) return;
 
-  static unsigned long lastLedUpdate = 0;
-  const unsigned long LED_REFRESH_MS = 500;
-  if (millis() - lastLedUpdate < LED_REFRESH_MS) return;
-  lastLedUpdate = millis();
+  // Throttle: WS2812 data takes ~30 µs per pixel + 50 µs reset. Running at
+  // full loop rate saturates the RMT driver. 50 ms = 20 fps is smooth enough.
+  static unsigned long lastUpdate = 0;
+  if (millis() - lastUpdate < 50) return;
+  lastUpdate = millis();
 
-  // Set brightness BEFORE writing pixels: Adafruit_NeoPixel scales colours at
-  // setPixelColor() time, so the order keeps the mapping lossless per frame.
   leds.setBrightness(ledBrightness());
   leds.clear();
 
-  bool lit = false;
+  bool anyLit = false;
   for (int led = 0; led < config.led_count; led++)
   {
     int m = config.led_map[led];
-    if (m < 0 || m >= MEASURE_COUNT) continue;   // unmapped slot -> off
-    if (!*toggles[ledMeasures[m].sensor]) continue; // mapped sensor disabled -> off
+    if (m < 0 || m >= MEASURE_COUNT) continue;
+    if (!*toggles[ledMeasures[m].sensor]) continue;
+
     float v = *ledMeasures[m].value;
-    if (isnan(v)) continue;                       // no data -> off
+    if (isnan(v)) continue;
+
     int pixel = config.led_reverse ? (config.led_count - 1 - led) : led;
     leds.setPixelColor(pixel, ledColorFromValue(v, config.led_red[led],    config.led_col1[led],
                                                   config.led_yellow[led], config.led_col2[led],
                                                   config.led_green[led],  config.led_col3[led]));
-    lit = true;
+    anyLit = true;
   }
   leds.show();
-  if (lit) ledsHaveLit = true;
+  if (anyLit) ledsHaveLit = true;
 }
 
 // ── Boot blink on the onboard ESP LED ────────────────────────────────────────

@@ -90,10 +90,10 @@ void pmsx003SetupSend()
     
     
     float *sensorVariables[] ={&pmsx003_pm1_0, &pmsx003_pm2_5, &pmsx003_pm10_0};//, &pmsx003_temp, &pmsx003_hum, &pmsx003_hcho};
-    if(reconfigure){
-        for (int i = 0; i < sizeof(SensorSuffix)/sizeof(SensorSuffix[0]); i++)
-            sendMqtt("homeassistant/sensor/" + mdns_hostname+"_"+UniqueDeviceID + "/" + sensor + "_" + SensorSuffix[i] + "/config","",true);
-            return;
+        if(reconfigure){
+        sendMqttSensorDiscoveryClear(sensor, SensorSuffix, sizeof(SensorSuffix)/sizeof(SensorSuffix[0]));
+        sendMqttSensorValuesClear(sensor, SensorSuffix, sizeof(SensorSuffix)/sizeof(SensorSuffix[0]));
+        return;
     }
 
     if(sensorStart==1)
@@ -104,16 +104,10 @@ void pmsx003SetupSend()
         pmsx003.init();
 
 
-        char status_topic[mqtt_messageRoot.length() + 1];
-        mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
+        String status_topic = mqttStatusTopic();
         // Sending MQTT Discovery messages for each PM sensor (pm1_0, pm2_5, pm10_0)
         
-        for (int i = 0; i < sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]); i++)
-            sendMqtt(
-                "homeassistant/sensor/" + mdns_hostname+"_"+UniqueDeviceID + "/" + sensor + "_" + SensorSuffix[i] + "/config", 
-                makeMqttSensorTopic(i, sensor, status_topic, &deviceClass[0], &SensorSuffix[0],  &unitOfMeasurement[0]), 
-                true
-            );
+        sendMqttSensorDiscovery(sensor, status_topic, deviceClass, SensorSuffix, unitOfMeasurement, sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]));
 
         // Handle sensor readings and refresh if not in low power mode
         if (!lowPowerMode_toggle)
@@ -133,15 +127,7 @@ void pmsx003SetupSend()
         pmsx003Read();
         applySensorOffset(4);
 
-        String msg="{";
-        for (int i=0; i<sizeof(sensorVariables)/sizeof(sensorVariables[0]); i++)
-        {
-            msg+="\""+SensorSuffix[i]+"\":"+jsonFloat(*(sensorVariables[i]))+",";
-        }
-        msg.remove(msg.length() - 1);
-        msg+="}";
-
-        sendMqtt(mqtt_messageRoot+"/"+sensor, msg,true);
+        sendMqttSensorValues(sensor, SensorSuffix, sensorVariables, sizeof(sensorVariables)/sizeof(sensorVariables[0]));
 
     }
 }

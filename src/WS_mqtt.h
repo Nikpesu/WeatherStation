@@ -5,6 +5,31 @@ inline String jsonFloat(float v)
   return String(v);
 }
 
+// ── MQTT helper functions used by sensor config files ──
+
+// Build the unique_id for Home Assistant discovery (matches the value in the
+// discovery payload so HA can correlate the config topic to the entity).
+inline String makeUniqueId(String sensor, String suffix) {
+  return UniqueDeviceID + "_" + sensor + "_" + mdns_hostname + "_" + suffix + "_" + DISCOVERY_UID_VER;
+}
+
+// Build the object_id for Home Assistant discovery (determines the entity_id:
+// sensor.<object_id>). Must match the object_id in the discovery payload.
+inline String makeObjectId(String sensor, String suffix) {
+  return sensor + "_" + suffix + "_" + mdns_hostname;
+}
+
+// Return the MQTT LWT / availability topic (the root topic used for
+// online/offline state).
+inline String mqttStatusTopic() {
+  return mqtt_messageRoot;
+}
+
+// Return a filesystem/MQTT-safe version of the device hostname.
+inline String safeDeviceName() {
+  return mdns_hostname;
+}
+
 void callback(char *topic, byte *payload, unsigned int length) {}
 
 void mqttSetup()
@@ -170,8 +195,46 @@ String makeMqttSensorTopic(int i, String sensor, String status_topic, String *de
           // entity_id is rebuilt from object_id above. Bump it again if you ever need
           // another clean rename.
           "\"unique_id\": \"" + UniqueDeviceID + "_" + sensor + "_" + mdns_hostname + "_" + (String)*(SensorSuffix+i) + "_" + DISCOVERY_UID_VER + "\"," // xxxxx_sps30_wstestHostname_pm1_0_v2
-          "\"value_template\": \"{{ value_json."+ (String)*(SensorSuffix+i)+" }}\"," // value_json.pm1_0 ...
-          "\"state_topic\": \""+mqtt_messageRoot+"/"+sensor+"\"," // wstest1/sps30
+          "\"value_template\": \"{{ value }}\","
+          "\"state_topic\": \""+mqtt_messageRoot+"/"+sensor+"_"+(String)*(SensorSuffix+i)+"\","
           "\"state_class\": \"measurement\""
           "}";
+}
+
+// Global helper to send discovery messages for all variables of a sensor
+inline void sendMqttSensorDiscovery(const String& sensor, const String& status_topic, String* deviceClass, String* SensorSuffix, String* unitOfMeasurement, int count)
+{
+    for (int i = 0; i < count; i++) {
+        sendMqtt(
+            "homeassistant/sensor/" + mdns_hostname + "/" + sensor + "_" + SensorSuffix[i] + "/config", 
+            makeMqttSensorTopic(i, sensor, status_topic, deviceClass, SensorSuffix, unitOfMeasurement), 
+            true
+        );
+    }
+}
+
+// Global helper to send state/telemetry values for all variables of a sensor
+inline void sendMqttSensorValues(const String& sensor, String* SensorSuffix, float** sensorVariables, int count)
+{
+    String base = String(mqtt_messageRoot) + "/" + sensor;
+    for (int i = 0; i < count; i++) {
+        sendMqtt(base + "_" + SensorSuffix[i], jsonFloat(*(sensorVariables[i])), true);
+    }
+}
+
+// Global helper to clear discovery messages for all variables of a sensor
+inline void sendMqttSensorDiscoveryClear(const String& sensor, String* SensorSuffix, int count)
+{
+    for (int i = 0; i < count; i++) {
+        sendMqtt("homeassistant/sensor/" + mdns_hostname + "/" + sensor + "_" + SensorSuffix[i] + "/config", "", true);
+    }
+}
+
+// Global helper to clear state/telemetry values for all variables of a sensor
+inline void sendMqttSensorValuesClear(const String& sensor, String* SensorSuffix, int count)
+{
+    String base = String(mqtt_messageRoot) + "/" + sensor;
+    for (int i = 0; i < count; i++) {
+        sendMqtt(base + "_" + SensorSuffix[i], "", true);
+    }
 }

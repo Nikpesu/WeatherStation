@@ -182,7 +182,7 @@ config into NVS and restores it on the next boot (ESP32).
 ### 🧮 Flash usage
 
 The dual-OTA [partition table](my_partitions.csv) splits a 4 MB chip into two 1.73 MB program slots.
-Current build sizes (v3.5.0, release mode):
+Current build sizes (v3.5.1, release mode):
 
 | Board | Flash | RAM |
 |-------|-------|-----|
@@ -320,6 +320,7 @@ A ground-up modernisation of the whole project:
 - **First-install auto-naming** — devices without a `secrets.h` get a unique hostname
   (`WS_ESP32C6_D4E5F6`) from the board type + MAC suffix.
 - **MQTT reconnect throttling** — retries every 15 s instead of hammering the broker.
+- **MQTT structure improvements** — Discovery topics are now neatly grouped by hostname (`node_id`), redundant names were stripped from state topics, and clearing disabled sensors properly removes them from the broker instead of spamming it.
 - **Bug-fix pass** — ~20 fixes across WiFi reconnect, config persistence, sensor NaN handling,
   pin validation, and more.
 - **V3 → V4 refactor** (early–mid 2026): modular `WS_*.h` sources, configurable pins with a UI,
