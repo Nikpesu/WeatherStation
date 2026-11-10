@@ -532,9 +532,10 @@
     .ledcolor-name { color: var(--accent); font-weight: bold; }
     .ledcolor-live { margin-left: auto; color: var(--text-dim); font-size: 0.8rem; }
     .ledcolor-swatch {
-      display: inline-block; width: 1rem; height: 1rem; border-radius: 50%;
-      border: 1px solid var(--border); margin-left: 0.4rem; vertical-align: middle;
-      box-shadow: 0 0 6px currentColor; transition: background 0.3s;
+      display: inline-block; width: 1.1rem; height: 1.1rem; border-radius: 50%;
+      border: 1.5px solid var(--border); margin-left: 0.4rem; vertical-align: middle;
+      background: transparent; box-sizing: border-box;
+      transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
     }
     .ledcolor-bar {
       height: 14px; border-radius: 7px; border: 1px solid var(--border);
@@ -1396,8 +1397,17 @@
     }
 
     // Replicate the C++ ledColorFromValue + lerpColor to show the live colour swatch.
-    function hexFromU32(c) { return '#' + c.toString(16).padStart(6, '0'); }
+    function hexFromU32(c) { return '#' + ((c >>> 0) & 0xFFFFFF).toString(16).padStart(6, '0'); }
+    function parseHexColor(c) {
+      if (typeof c === 'number') return c;
+      if (!c) return 0;
+      const s = String(c).trim().replace(/^#/, '');
+      const n = parseInt(s, 16);
+      return isNaN(n) ? 0 : n;
+    }
     function lerpColor(c1, c2, t) {
+      if (t < 0) t = 0;
+      if (t > 1) t = 1;
       const r1 = (c1 >> 16) & 0xFF, g1 = (c1 >> 8) & 0xFF, b1 = c1 & 0xFF;
       const r2 = (c2 >> 16) & 0xFF, g2 = (c2 >> 8) & 0xFF, b2 = c2 & 0xFF;
       const r = Math.round(r1 + (r2 - r1) * t);
@@ -1406,11 +1416,13 @@
       return (r << 16) | (g << 8) | b;
     }
     function ledColor(v, red, yellow, green, col1, col2, col3) {
-      if (v === null || v === undefined) return null;
-      if (v <= red) return col1;
-      if (v >= green) return col3;
-      if (v <= yellow) return lerpColor(col1, col2, (v - red) / (yellow - red));
-      return lerpColor(col2, col3, (v - yellow) / (green - yellow));
+      if (v === null || v === undefined || isNaN(v)) return null;
+      const d1 = yellow - red;
+      const f1 = (d1 !== 0) ? (v - red) / d1 : 2.0;
+      if (f1 <= 1.0) return lerpColor(col1, col2, f1);
+      const d2 = green - yellow;
+      const f2 = (d2 !== 0) ? (v - yellow) / d2 : 1.0;
+      return lerpColor(col2, col3, f2);
     }
     function updateLedSwatches() {
       for (let i = 0; i < ledState.count; i++) {
@@ -1418,10 +1430,38 @@
         if (!el) continue;
         const L = ledState.leds[i] || {};
         const mp = L.map >= 0 ? L.map : -1;
-        const v = (mp >= 0 && mp in lastLive) ? lastLive[mp] : null;
-        const col = ledColor(v, L.red, L.yellow, L.green,
-          parseInt(L.col1, 16), parseInt(L.col2, 16), parseInt(L.col3, 16));
-        el.style.background = col ? hexFromU32(col) : 'transparent';
+        let v = (mp >= 0 && (mp in lastLive)) ? lastLive[mp] : ((L.value !== undefined && L.value !== null) ? L.value : null);
+        if (v !== null && v !== undefined && v !== '—') v = Number(v);
+        else v = null;
+
+        const col1In = document.getElementById(`lc_col1_${i}`);
+        const col2In = document.getElementById(`lc_col2_${i}`);
+        const col3In = document.getElementById(`lc_col3_${i}`);
+        const redIn = document.getElementById(`lc_red_${i}`);
+        const yellowIn = document.getElementById(`lc_yellow_${i}`);
+        const greenIn = document.getElementById(`lc_green_${i}`);
+
+        const c1 = parseHexColor(col1In ? col1In.value : L.col1);
+        const c2 = parseHexColor(col2In ? col2In.value : L.col2);
+        const c3 = parseHexColor(col3In ? col3In.value : L.col3);
+        const red = redIn ? Number(redIn.value) : Number(L.red);
+        const yellow = yellowIn ? Number(yellowIn.value) : Number(L.yellow);
+        const green = greenIn ? Number(greenIn.value) : Number(L.green);
+
+        const col = (mp >= 0 && v !== null && !isNaN(v))
+          ? ledColor(v, red, yellow, green, c1, c2, c3)
+          : null;
+
+        if (col !== null) {
+          const hex = hexFromU32(col);
+          el.style.backgroundColor = hex;
+          el.style.borderColor = hex;
+          el.style.boxShadow = '0 0 8px ' + hex;
+        } else {
+          el.style.backgroundColor = 'transparent';
+          el.style.borderColor = 'var(--border)';
+          el.style.boxShadow = 'none';
+        }
       }
     }
 
@@ -1429,9 +1469,10 @@
       let html = '';
       for (let i = 0; i < ledState.count; i++) {
         const L = Object.assign({}, LED_FALLBACK, ledState.leds[i] || {});
-        const live = (L.value === null || L.value === undefined) ? '—' : L.value;
         const sensorIdx = mapSensor(L.map);          // -1 if none / sensor disabled
         const map = sensorIdx < 0 ? -1 : L.map;
+        let v = (map >= 0 && (map in lastLive)) ? lastLive[map] : ((L.value !== undefined && L.value !== null) ? L.value : null);
+        const live = (v === null || v === undefined) ? '—' : v;
         html +=
           `<div class="ledcolor-row">` +
             `<div class="ledcolor-head">LED ${i + 1} · ` +
@@ -1440,16 +1481,17 @@
               `<span class="ledcolor-live" id="lc_live_${i}">live: ${live}</span>` +
               `<span class="ledcolor-swatch" id="lc_swatch_${i}"></span></div>` +
             `<div class="ledcolor-inputs">` +
-              `<input type="color" id="lc_col1_${i}" value="${L.col1}">` +
-              `<input type="number" step="any" id="lc_red_${i}" value="${L.red}">` +
-              `<input type="color" id="lc_col2_${i}" value="${L.col2}">` +
-              `<input type="number" step="any" id="lc_yellow_${i}" value="${L.yellow}">` +
-              `<input type="color" id="lc_col3_${i}" value="${L.col3}">` +
-              `<input type="number" step="any" id="lc_green_${i}" value="${L.green}">` +
+              `<input type="color" id="lc_col1_${i}" value="${L.col1}" oninput="syncLedInputs(); updateLedSwatches()">` +
+              `<input type="number" step="any" id="lc_red_${i}" value="${L.red}" oninput="syncLedInputs(); updateLedSwatches()">` +
+              `<input type="color" id="lc_col2_${i}" value="${L.col2}" oninput="syncLedInputs(); updateLedSwatches()">` +
+              `<input type="number" step="any" id="lc_yellow_${i}" value="${L.yellow}" oninput="syncLedInputs(); updateLedSwatches()">` +
+              `<input type="color" id="lc_col3_${i}" value="${L.col3}" oninput="syncLedInputs(); updateLedSwatches()">` +
+              `<input type="number" step="any" id="lc_green_${i}" value="${L.green}" oninput="syncLedInputs(); updateLedSwatches()">` +
             `</div>` +
           `</div>`;
       }
       document.getElementById('ledColorBody').innerHTML = html;
+      updateLedSwatches();
     }
 
     // Read the visible inputs back into ledState so edits survive a re-render.
@@ -1495,6 +1537,11 @@
       const map = list.length ? list[0].idx : -1;
       ledState.leds[i].map = map;
       applyMeasureDefaults(i, map);
+      if (map >= 0 && (map in lastLive)) ledState.leds[i].value = lastLive[map];
+      else {
+        const m = liveMeasures.find(x => x.idx === map);
+        ledState.leds[i].value = m ? m.value : null;
+      }
       renderLedRows();
     }
     // Picking a part sets the exact measurement.
@@ -1503,6 +1550,22 @@
       const map = Number(document.getElementById(`lc_part_${i}`).value);
       ledState.leds[i].map = map;
       applyMeasureDefaults(i, map);
+      if (map >= 0 && (map in lastLive)) ledState.leds[i].value = lastLive[map];
+      else {
+        const m = liveMeasures.find(x => x.idx === map);
+        ledState.leds[i].value = m ? m.value : null;
+      }
+      renderLedRows();
+    }
+    // Live update when count changes
+    function onLedCountChange() {
+      syncLedInputs();
+      let c = parseInt(document.getElementById('led_count_in').value, 10);
+      if (isNaN(c) || c < 1) c = 1;
+      if (c > ledState.maxCount) { c = ledState.maxCount; document.getElementById('led_count_in').value = c; }
+      for (let i = ledState.leds.length; i < c; i++)
+        ledState.leds[i] = Object.assign({}, LED_FALLBACK);
+      ledState.count = c;
       renderLedRows();
     }
 
@@ -1625,7 +1688,9 @@
           const el = document.getElementById('lc_live_' + i);
           if (!el) continue;
           const mp = ledState.leds[i] ? ledState.leds[i].map : -1;
-          el.textContent = 'live: ' + fmtLive((mp >= 0 && (mp in map)) ? map[mp] : null);
+          const v = (mp >= 0 && (mp in map)) ? map[mp] : null;
+          if (ledState.leds[i]) ledState.leds[i].value = v;
+          el.textContent = 'live: ' + fmtLive(v);
         }
         updateLedSwatches();
       }

@@ -26,17 +26,11 @@
 
 ## 👋 About this project
 
-I built the **WeatherStation** myself back in **2022** — a hobby project I coded from scratch to
-read a few sensors on an ESP and push the values into Home Assistant. The original was a single
-`WeatherStation.ino` sketch.
+The base of this project was created and written from scratch by me ([**@Nikpesu**](https://github.com/Nikpesu)) back in **2022** — a hobby project to read a few sensors on an ESP and push the values into Home Assistant. The original was a single `WeatherStation.ino` sketch.
 
-In **2026** I came back to it and rebuilt it into what it is now: a modular, multi-board firmware
-with a themed single-page web interface, a proper config/auth system, encrypted secrets, addressable
-status LEDs, per-sensor calibration, over-the-air updates straight from GitHub Releases, and CI that
-publishes a new build on every commit. Same idea, a lot more device.
+In **2026**, the project was extensively modified, expanded, and improved with the help of AI into what it is now: a modular, multi-board firmware with a themed single-page web interface, a proper config/auth system, encrypted secrets, addressable status LEDs, per-sensor calibration, over-the-air updates straight from GitHub Releases, and CI that publishes a new build on every commit. Same idea, a lot more device.
 
-Everything here — firmware, web UI and tooling — is written and maintained by me,
-[**@Nikpesu**](https://github.com/Nikpesu). See the [changelog](#-changelog) for how it got here.
+Base architecture and original implementation written by [**@Nikpesu**](https://github.com/Nikpesu), modified and improved with the help of AI. See the [changelog](#-changelog) for how it got here.
 
 ---
 
@@ -182,7 +176,7 @@ config into NVS and restores it on the next boot (ESP32).
 ### 🧮 Flash usage
 
 The dual-OTA [partition table](my_partitions.csv) splits a 4 MB chip into two 1.73 MB program slots.
-Current build sizes (v3.5.1, release mode):
+Current build sizes (v3.5.2, release mode):
 
 | Board | Flash | RAM |
 |-------|-------|-----|
