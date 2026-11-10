@@ -21,13 +21,27 @@ void sgp30Read()
         sgp30.setHumidity(0);
 
 
-    sgp30.IAQmeasure();
-    sgp30.IAQmeasureRaw();
+    if (sgp30.IAQmeasure())
+    {
+        sgp30_co2 = sgp30.eCO2;
+        sgp30_tvoc = sgp30.TVOC;
+    }
+    else
+    {
+        sgp30_co2 = nan("");
+        sgp30_tvoc = nan("");
+    }
 
-    sgp30_co2 = sgp30.eCO2;
-    sgp30_tvoc = sgp30.TVOC;
-    sgp30_h2 = sgp30.rawH2;
-    sgp30_eth = sgp30.rawEthanol;
+    if (sgp30.IAQmeasureRaw())
+    {
+        sgp30_h2 = sgp30.rawH2;
+        sgp30_eth = sgp30.rawEthanol;
+    }
+    else
+    {
+        sgp30_h2 = nan("");
+        sgp30_eth = nan("");
+    }
 }
 
 void sgp30SetupSend()

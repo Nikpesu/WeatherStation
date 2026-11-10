@@ -89,6 +89,20 @@
   #define BMP580_TOGGLE false
 #endif
 
+#ifndef D0
+  #define D0 0
+  #define D1 1
+  #define D2 2
+  #define D3 3
+  #define D4 4
+  #define D5 5
+  #define D6 6
+  #define D7 7
+  #define D8 8
+  #define D9 9
+  #define D10 10
+#endif
+
 //device
 #define device ARDUINO_BOARD
 
@@ -232,6 +246,12 @@
   #define LDR_BRIGHTNESS_TOGGLE false
 #endif
 #define LDR_ADC_MAX 4095 // 12-bit ADC full-scale (ESP32 analogRead default)
+#ifndef LDR_PROBE_COUNT
+  #define LDR_PROBE_COUNT 10       // 5-10 probes in FIFO moving average
+#endif
+#ifndef LDR_PROBE_INTERVAL_MS
+  #define LDR_PROBE_INTERVAL_MS 500 // Interval between probe readings in milliseconds (every 500ms)
+#endif
 
 // Onboard ESP status LED, used for the boot blink (separate from the WS2812 strip).
 // Defaults to the board's built-in LED. XIAO and ESP8266 built-in LEDs are active-low

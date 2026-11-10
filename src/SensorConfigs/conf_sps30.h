@@ -5,6 +5,7 @@ void sps30Reconfigure() {
         reconfigure = 1;
         sps30SetupSend();
         reconfigure = 0;
+        return;
     }
     sps30.begin(Wire, SPS30_I2C_ADDR_69);
     sps30.startMeasurement(SPS30_OUTPUT_FORMAT_OUTPUT_FORMAT_FLOAT);
@@ -51,6 +52,7 @@ void sps30Read() {
         if (error != NO_ERROR) {
             errorToString(error, errorMessage, sizeof errorMessage);
             Serial.println("[" + runningTime() + "] SPS30 error (Read): " + errorMessage);
+            sps30_pm1_0 = sps30_pm2_5 = sps30_pm10_0 = nan("");
         } else {
             // FIX: Use 'mc' (Mass Concentration) for PM values, not 'nc' (Number Concentration)
             sps30_pm1_0 = mc1p0;

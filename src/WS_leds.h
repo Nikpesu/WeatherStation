@@ -118,32 +118,117 @@ void ledsBegin()
   initedCount = config.led_count;
 }
 
-// Strip brightness (0-255). With auto-brightness off it's a fixed value; with the
-// LDR enabled it's mapped from ambient light (bright -> brighter so LEDs stay
-// visible by day and dim at night). A deadband of 10 prevents tiny fluctuations
-// from constantly retriggering a strip refresh.
-uint8_t ledBrightness()
+// ── Ambient-light (LDR) auto-brightness FIFO probe buffer ────────────────────
+// Stores a rolling FIFO buffer of 5-10 probe readings (LDR_PROBE_COUNT, default 10).
+// Samples every 500ms (LDR_PROBE_INTERVAL_MS), averages the readings across the
+// array, and sets the desired calculated brightness mapped to calibration limits.
+static int ldrProbes[LDR_PROBE_COUNT];
+static bool ldrProbesInited = false;
+static int lastLdrPin = -1;
+static bool lastLdrToggle = false;
+static unsigned long lastLdrProbeTime = 0;
+static int ldrAvgRaw = 0;
+static uint8_t ldrCalculatedBrightness = LED_BRIGHTNESS;
+
+// Calculate brightness from an ambient light ADC reading
+uint8_t ldrCalculateBrightness(int raw)
 {
-  if (!ldr_brightness_toggle) return LED_BRIGHTNESS;
-
-  static uint8_t lastB = LED_BRIGHTNESS;
-
-  int raw = analogRead(config.LDR_pin); // 0 = bright .. LDR_ADC_MAX = dark
-
   long b;
   if (config.ldr_ambient_max == config.ldr_ambient_min)
+  {
     b = config.ldr_bright_min;  // avoid division by zero in map()
+  }
   else
+  {
     b = map((long)raw, config.ldr_ambient_min, config.ldr_ambient_max,
             config.ldr_bright_max, config.ldr_bright_min);
-  if (b < config.ldr_bright_min) b = config.ldr_bright_min;
-  if (b > config.ldr_bright_max) b = config.ldr_bright_max;
+  }
+  long bMin = (config.ldr_bright_min < config.ldr_bright_max) ? config.ldr_bright_min : config.ldr_bright_max;
+  long bMax = (config.ldr_bright_min < config.ldr_bright_max) ? config.ldr_bright_max : config.ldr_bright_min;
+  if (b < bMin) b = bMin;
+  if (b > bMax) b = bMax;
+  return (uint8_t)b;
+}
 
-  // Deadband: only change output if the difference exceeds 10 (out of 255).
-  if (abs((int)b - (int)lastB) > 10)
-    lastB = (uint8_t)b;
+// Samples the LDR every 500ms, updates the FIFO queue, averages readings,
+// and sets the desired calculated brightness.
+void ldrUpdate(bool force = false)
+{
+  if (config.LDR_pin < 0) return;
 
-  return lastB;
+  // Pin changed -> reset buffer
+  if (lastLdrPin != config.LDR_pin)
+  {
+    lastLdrPin = config.LDR_pin;
+    ldrProbesInited = false;
+    lastLdrProbeTime = 0;
+  }
+
+  // Auto-brightness enabled -> seed buffer immediately
+  if (ldr_brightness_toggle != lastLdrToggle)
+  {
+    lastLdrToggle = ldr_brightness_toggle;
+    if (ldr_brightness_toggle)
+    {
+      ldrProbesInited = false;
+      lastLdrProbeTime = 0;
+    }
+  }
+
+  if (!force && !ldr_brightness_toggle) return;
+
+  unsigned long now = millis();
+  if (lastLdrProbeTime != 0 && (now - lastLdrProbeTime < LDR_PROBE_INTERVAL_MS))
+  {
+    return;
+  }
+  lastLdrProbeTime = now;
+
+  int sample = analogRead(config.LDR_pin); // 0 = bright .. LDR_ADC_MAX = dark
+
+  if (!ldrProbesInited)
+  {
+    for (int i = 0; i < LDR_PROBE_COUNT; i++)
+    {
+      ldrProbes[i] = sample;
+    }
+    ldrProbesInited = true;
+  }
+  else
+  {
+    // FIFO: shift elements left (oldest probe at index 0 drops off) and append new sample
+    for (int i = 0; i < LDR_PROBE_COUNT - 1; i++)
+    {
+      ldrProbes[i] = ldrProbes[i + 1];
+    }
+    ldrProbes[LDR_PROBE_COUNT - 1] = sample;
+  }
+
+  // Average readings across the FIFO array
+  long sum = 0;
+  for (int i = 0; i < LDR_PROBE_COUNT; i++)
+  {
+    sum += ldrProbes[i];
+  }
+  ldrAvgRaw = (int)(sum / LDR_PROBE_COUNT);
+
+  // Set the desired calculated brightness
+  ldrCalculatedBrightness = ldrCalculateBrightness(ldrAvgRaw);
+}
+
+// Return the moving average raw ADC reading
+int ldrAverageRaw()
+{
+  return ldrAvgRaw;
+}
+
+// Strip brightness (0-255). With auto-brightness off it's a fixed value; with the
+// LDR enabled it uses the desired brightness calculated from the FIFO moving average.
+uint8_t ledBrightness()
+{
+  ldrUpdate();
+  if (!ldr_brightness_toggle) return LED_BRIGHTNESS;
+  return ldrCalculatedBrightness;
 }
 
 // Blend two packed 0xRRGGBB colours by fraction t (0..1).
@@ -183,6 +268,8 @@ bool ledsHaveLit = false;
 
 void ledsUpdate()
 {
+  if (ldr_brightness_toggle) ldrUpdate();
+
   if (!led_toggle) return;
 
   // Throttle: WS2812 data takes ~30 µs per pixel + 50 µs reset. Running at

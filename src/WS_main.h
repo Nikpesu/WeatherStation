@@ -15,7 +15,11 @@ void startProgram()
   delay(200);
 
   //opening littlefs and loading config 
+  #if defined(ESP32)
+  if(!LittleFS.begin(true)){
+#else
   if(!LittleFS.begin()){
+#endif
     Serial.println("["+runningTime()+"] An Error has occurred while mounting LittleFS");
     return;
   }
@@ -75,8 +79,9 @@ void rst(){
 }
 
 void sleepAndReset(){
-  Serial.print("["+runningTime()+"] Sleep for "+(refreshTime-5)+"s and restart!"); 
-  ESP.deepSleep((refreshTime-5)*1e6);
+  int sleepSecs = (refreshTime > 5) ? (refreshTime - 5) : 5;
+  Serial.print("["+runningTime()+"] Sleep for "+String(sleepSecs)+"s and restart!"); 
+  ESP.deepSleep((uint64_t)sleepSecs * 1000000ULL);
   rst();
 } //1s = 1e6
 
@@ -86,14 +91,12 @@ unsigned int counter=10000; //some sensors read/refresh data
 unsigned int counter2=10000; //INFO refresh time
 void loopedProgram()
 {
-  int timeStart;
-  int timeTook;
-  //espBootBlinkTick();   // drive the onboard-LED boot blink until it completes
+  espBootBlinkTick();   // drive the onboard-LED boot blink until it completes
+  unsigned long timeStart = millis();
+  int timeTook = 0;
+
   if(wifiConnectionType)
   {
-    timeStart=millis();
-
-
     //refreshing sensors, connecting to wifi if disconnected, looping http services and dns loop
     if (WiFi.status() != WL_CONNECTED) { wifiStart(); mqttConnect(); sensorsBegin(); }
 
@@ -112,11 +115,6 @@ void loopedProgram()
     ArduinoOTA.handle();
     server.handleClient();
 
-    //delay and delay calculation
-    timeTook=millis()-timeStart;
-    timeStart=LOOP_TIME-timeTook;
-    delay(timeStart>MIN_LOOP_DELAY ? timeStart : MIN_LOOP_DELAY);
-
     //some sensors read/refresh data
     if(counter>=1000)
     {
@@ -124,19 +122,20 @@ void loopedProgram()
       //if(SPS30_toggle) sps30Read();
       counter=0;
     } 
+
+    timeTook = millis() - timeStart;
+    int delayRemaining = LOOP_TIME - timeTook;
+    delay(delayRemaining > MIN_LOOP_DELAY ? delayRemaining : MIN_LOOP_DELAY);
   }
   else
   {
-    timeStart=millis();
-
     //handling requests and dns sending...
     dnsServer.processNextRequest();
     server.handleClient();
 
-    //delay and delay calculation
-    timeTook=millis()-timeStart;
-    timeStart= HOTSPOT_LOOP_TIME-timeTook;
-    delay(timeStart>MIN_LOOP_DELAY ? timeStart : MIN_LOOP_DELAY);
+    timeTook = millis() - timeStart;
+    int delayRemaining = HOTSPOT_LOOP_TIME - timeTook;
+    delay(delayRemaining > MIN_LOOP_DELAY ? delayRemaining : MIN_LOOP_DELAY);
   }
 
   //update counters
@@ -144,14 +143,15 @@ void loopedProgram()
   unsigned int loopTime = wifiConnectionType ? LOOP_TIME : HOTSPOT_LOOP_TIME;
   counter += loopTime;
   counter2 += loopTime;
-  avgTime += loopTime - timeStart;
+  avgTime += (unsigned int)timeTook;
 
   //every 10s print out INFO and reset counters...
   if(counter2>=10000)
   {
     //make string
     infoString="["+runningTime()+"] " + "INFO:";
-    infoString+="\n\t\tAVG loop time: "+(String)(avgTime/loopCount)+ "ms";
+    if (loopCount > 0)
+      infoString+="\n\t\tAVG loop time: "+(String)(avgTime/loopCount)+ "ms";
     infoString+="\n\t\tmdns hostname: "+(String)(mdns_hostname)+ ".local";
     #if defined(ESP32)
       infoString+="\n\t\tFS use: "+(String)(LittleFS.usedBytes()/1024)+"KB/"+(String)(LittleFS.totalBytes()/1024)+"KB"; 

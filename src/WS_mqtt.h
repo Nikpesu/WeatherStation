@@ -127,9 +127,6 @@ void sendMqtt(String topic, String msg, bool retain)
     return;
   }
 
-  char status_topic[mqtt_messageRoot.length() + 1];
-  mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
-  client.publish(status_topic, "{\"state\":\"online\"}", true);  // Send initial online message (retained)
 
   Serial.println("["+runningTime()+"] Sent topic: \t"+topic);
   int pos=0;

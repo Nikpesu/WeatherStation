@@ -19,11 +19,16 @@ void scd4xReconfigure()
 
 void scd4xRead()
 {
-    scd4x.readMeasurement();
-    scd4x_co2=scd4x.getCO2();
-    scd4x_temp=scd4x.getTemperature();
-    scd4x_hum=scd4x.getHumidity();
-
+    if (scd4x.readMeasurement())
+    {
+        scd4x_co2 = scd4x.getCO2();
+        scd4x_temp = scd4x.getTemperature();
+        scd4x_hum = scd4x.getHumidity();
+    }
+    else
+    {
+        scd4x_co2 = scd4x_temp = scd4x_hum = nan("");
+    }
 }
 
 void scd4xSetupSend()

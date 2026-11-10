@@ -77,8 +77,13 @@ void sensorLoop()
 
 int getAbsoluteHumidity(float temperature, float humidity)
 {
+  if (isnan(temperature) || isnan(humidity) || humidity <= 0.0f || (273.15f + temperature) <= 0.0f || (243.12f + temperature) == 0.0f)
+  {
+    return 0;
+  }
   // approximation formula from Sensirion SGP30 Driver Integration chapter 3.15
   const float absoluteHumidity = 216.7f * ((humidity / 100.0f) * 6.112f * exp((17.62f * temperature) / (243.12f + temperature)) / (273.15f + temperature)); // [g/m^3]
+  if (isnan(absoluteHumidity) || isinf(absoluteHumidity) || absoluteHumidity < 0.0f) return 0;
   const uint32_t absoluteHumidityScaled = static_cast<uint32_t>(1000.0f * absoluteHumidity);                                                                // [mg/m^3]
-  return absoluteHumidityScaled;
+  return (int)absoluteHumidityScaled;
 }

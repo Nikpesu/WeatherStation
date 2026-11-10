@@ -47,8 +47,7 @@ void bmp580SetupSend()
     {
         bmp580.beginI2C(BMP581_I2C_ADDRESS_DEFAULT); // 0x47 (use _SECONDARY 0x46 if the board straps it differently)
 
-        char status_topic[mqtt_messageRoot.length() + 1];
-        mqtt_messageRoot.toCharArray(status_topic, mqtt_messageRoot.length() + 1);
+        String status_topic = mqttStatusTopic();
 
         sendMqttSensorDiscovery(sensor, status_topic, deviceClass, SensorSuffix, unitOfMeasurement, sizeof(unitOfMeasurement)/sizeof(unitOfMeasurement[0]));
 

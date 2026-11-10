@@ -6,28 +6,31 @@ void pm1006kReconfigure()
         reconfigure=1;
         pm1006kSetupSend();
         reconfigure=0;
+        if (pm1006k) { delete pm1006k; pm1006k = nullptr; }
+        return;
     }
 
-    delete pm1006k;
+    if (pm1006k) { delete pm1006k; pm1006k = nullptr; }
     #if defined(ESP8266)
         pm1006k = new PM1006K(&pm1006Serial);
     #elif defined(ESP32)
         pm1006k = new PM1006K(&Serial1);
     #endif
-    //taskManager.cancelTask(PM1006K_task);
 }
 
 
 void pm1006kRead()
 {
     if (!pm1006k) return;
-    // Replace this with your actual PM1006K reading logic
-    // These variables must be populated with sensor values
     if (pm1006k->takeMeasurement())
     { 
         pm1006k_pm1_0 = pm1006k->getPM1_0();
         pm1006k_pm2_5 = pm1006k->getPM2_5();
         pm1006k_pm10_0 = pm1006k->getPM10();
+    }
+    else
+    {
+        pm1006k_pm1_0 = pm1006k_pm2_5 = pm1006k_pm10_0 = nan("");
     }
 }
 
@@ -47,6 +50,7 @@ void pm1006kSetupSend()
     if(sensorStart==1)
     {
         // https://github.com/kevinlutzer/Arduino-PM1006K/blob/main/examples/pm1006ktest/pm1006ktest.ino
+        if (pm1006k) { delete pm1006k; pm1006k = nullptr; }
         #if defined(ESP8266)
             pm1006Serial.begin(PM1006K::BAUD_RATE);
             pm1006k = new PM1006K(&pm1006Serial);

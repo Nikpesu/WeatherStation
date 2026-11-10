@@ -264,15 +264,15 @@ void httpLiveValues()
   s += "]";
   server.send(200, "application/json", s);
 }
-// Live LDR reading for the LED popup (polled fast, ~0.5s, while it's open): the raw
-// ADC value plus the brightness it currently maps to. Lets the user calibrate the
+// Live LDR reading for the LED popup (polled fast, ~0.5s, while it's open): the averaged
+// ADC probe value plus the brightness it currently maps to. Lets the user calibrate the
 // ambient min/max against what the sensor actually reads right now.
 void httpLdr()
 {
   REQUIRE_AUTH();
-  int raw = analogRead(config.LDR_pin);
+  ldrUpdate(true);
   server.send(200, "application/json",
-    "{\"raw\":" + String(raw) + ",\"brightness\":" + String(ledBrightness()) + "}");
+    "{\"raw\":" + String(ldrAverageRaw()) + ",\"brightness\":" + String(ldrCalculatedBrightness) + "}");
 }
 // Static catalogue + current offsets for the sensor-calibration popup. One entry
 // per measurement: which sensor it belongs to, its label/key, whether that sensor
@@ -680,7 +680,11 @@ void httpData()
   else
   {
       
-    if((mdns_hostname!=jsonDoc["mdns_hostname"].as<String>()|| mqtt_messageRoot!=jsonDoc["mqtt_messageRoot"].as<String>() || jsonDoc["wifi_ssid"].as<String>()=="") && wifiConnectionType )
+    String newHostname = jsonDoc["mdns_hostname"].isNull() ? mdns_hostname : jsonDoc["mdns_hostname"].as<String>();
+    String newMsgRoot = jsonDoc["mqtt_messageRoot"].isNull() ? mqtt_messageRoot : jsonDoc["mqtt_messageRoot"].as<String>();
+    String newSsid = jsonDoc["wifi_ssid"].isNull() ? wifi_ssid : jsonDoc["wifi_ssid"].as<String>();
+
+    if((mdns_hostname != newHostname || mqtt_messageRoot != newMsgRoot || newSsid == "") && wifiConnectionType)
     {
       for(int i=0; i<SENSOR_COUNT; i++)
       { //toggleIDName: i0-Sensor_Toggle i1-SensorName
@@ -692,22 +696,27 @@ void httpData()
     //Sensor toggles
     for(int i=0; i<SENSOR_COUNT; i++)
     {//toggleIDName: i0-Sensor_Toggle i1-SensorName
-      *toggles[i]=jsonDoc[toggleIDName[i][0]];
+      if(!jsonDoc[toggleIDName[i][0]].isNull())
+        *toggles[i]=jsonDoc[toggleIDName[i][0]].as<bool>();
     }
     for(int i=0; i<PINS_COUNT;i++)
     {
-      // Accept either a GPIO number or a "Dx" board label.
-      int p = pinFromString(jsonDoc[pinIDName[i][0]].as<String>());
-      if (p >= 0) *pins[i] = p;
+      if(jsonDoc[pinIDName[i][0]].isNull()) continue;
+      String pinStr = jsonDoc[pinIDName[i][0]].as<String>();
+      // Accept either a GPIO number or a "Dx" board label (or "-1" to disable).
+      int p = pinFromString(pinStr);
+      if (p >= 0 || pinStr == "-1") *pins[i] = p;
     }
     // LED settings are handled entirely by the LED popup (/ledConfigSet), not here.
     for(int i=0; i<FIELD_COUNT;i++)
     {
       // The config/login password is changed only via /passChange, never here, so a
       // form save can't accidentally wipe it (the field isn't shown on the page).
-      if (fieldsIDNameTypePlaceholder[i][0] == "config_password") continue;
+      String id = fieldsIDNameTypePlaceholder[i][0];
+      if (id == "config_password") continue;
+      if (jsonDoc[id].isNull()) continue;
 
-      String value = jsonDoc[fieldsIDNameTypePlaceholder[i][0]].as<String>();
+      String value = jsonDoc[id].as<String>();
       String nochange = (String)NO_PASS_CHANGE;
 
       if (fieldsIDNameTypePlaceholder[i][2] == "password") {
@@ -889,13 +898,12 @@ void wifiRoamCheck()
   }
 }
 
-long  int timeout=0;
 void wifiStart()
 {
   //wifi start ...
   int retries = 0;
   do{
-    timeout=millis()+10000;
+    unsigned long startWait = millis();
     WiFi.persistent(false);
     WiFi.disconnect(true);
     WiFi.setHostname(mdns_hostname.c_str());  // must be before mode() so DHCP sends the custom name
@@ -903,7 +911,7 @@ void wifiStart()
     if(WiFi.status() != WL_CONNECTED) WiFi.disconnect();
     connectToBestAP();
     Serial.print("["+runningTime()+"] ("+wifi_ssid+") WI-FI starting");
-    while (!WiFi.isConnected() and millis()<=timeout)
+    while (!WiFi.isConnected() && (millis() - startWait < 10000))
     {
       delay(500);
       espBootBlinkTick();   // keep the onboard LED blinking while WiFi connects
@@ -913,6 +921,7 @@ void wifiStart()
     if (++retries >= 5)
     {
       Serial.println("["+runningTime()+"] WI-FI failed after 5 retries, falling back to hotspot");
+      wifiConnectionType = false;
       apStart();
       return;
     }
@@ -931,7 +940,7 @@ void wifiStart()
   else
     Serial.println("["+runningTime()+"] MDNS failed to start!");
   ArduinoOTA.setHostname(mdns_hostname.c_str());
-  MDNS.addService("_http", "_tcp", 80);
+  MDNS.addService("http", "tcp", 80);
 
   /*
   #if defined(ESP32)
